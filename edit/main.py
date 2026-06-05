@@ -14,6 +14,7 @@ from .state import (
 from .editor_helpers import (
     print_status,
     initial_set,
+    fill
 )
 from .process_editor_keys import process_editor_keys
 from .file_browser_helpers import (
@@ -31,53 +32,102 @@ class MODE(Enum):
     TERM = 5
 
 
+def trim_path(path: str, max_len: int) -> str:
+    if (len(path) - 3 > max_len): 
+        return '...' + path[-(max_len-3):]
+    else:
+        return fill(path, max_len)
+
+
+def draw_status_line(state, browser):
+    directory = getattr(browser, "current_path", os.getcwd())
+    directory = directory.replace("\\", "/")
+
+    if not directory.endswith("/"):
+        directory += "/"
+
+    file_path = state.file_path
+
+    if file_path is not None:
+        file_path = state.file_path.replace("\\", "/")
+        file_path = trim_path(file_path, 50)
+
+    directory = trim_path(directory, 29)
+
+    status = f"{directory}|{file_path or ''}"
+
+    print("\033[1;2H", end="")
+    print("\033[2K", end="")
+    print(status, end="")
+
+
 def redraw_all(state, selectionState, browser):
+    draw_status_line(state, browser)
     draw_file_browser(browser)
     initial_set(state, selectionState)
 
 
 def main(use_tab: bool = False, tab_size: int = 2):
     size = os.get_terminal_size()
-    status_line_width = 1 # There will be a status line between the FileBrowser and TextEditor
+    status_line_width = 1  # There will be a status line between the FileBrowser and TextEditor
     browser_width = 30
     editor_width = max(1, size.columns - browser_width - status_line_width)
+
     state = EditorState(
         use_tab=use_tab,
         tab_size=tab_size,
         view_box=(
             browser_width + status_line_width,
-            0,
+            1,
             editor_width,
-            size.lines,
+            size.lines - 1,
         ),
     )
 
     browser = FileBrowserState(
         view_box=(
             0,
-            0,
+            1,
             browser_width,
-            size.lines,
+            size.lines - 1,
         )
     )
 
     selectionState = SelectionState()
+    mode = MODE.FILE_BROWSER
 
     if len(sys.argv) > 1:
-        state.file_path = sys.argv[1]
-        state.doc_lines = load_file(state.file_path)
-    else:
-        state.file_path = "untitled.txt"
+        path = sys.argv[1]
+        if os.stat(path)[0] & 0x4000:
+            # is a directory
+            pass
+        else: 
+            state.file_path = sys.argv[1]
+            state.doc_lines = load_file(state.file_path)
+            mode = MODE.EDIT
+            # if not state.doc_lines:
+            #     state.doc_lines = [""]
+        
 
-    if not state.doc_lines:
-        state.doc_lines = [""]
+    # TODO define Ctrl+N to create an empty file within a directory
+    # if len(sys.argv) > 1:
+    #     state.file_path = sys.argv[1]
+    #     state.doc_lines = load_file(state.file_path)
+    # else:
+    #     state.file_path = "untitled.txt"
+    # if not state.doc_lines:
+    #     state.doc_lines = [""]
 
     prev_key = None
-    mode = MODE.EDIT
     modal_payload = None
+
     clear()
-    initial_set(state, selectionState)
+    draw_status_line(state, browser)
+
+    if state.file_path:
+        initial_set(state, selectionState)
     draw_file_browser(browser)
+
     # Use these 2 lines two draw UI
     print(end='')
     sys.stdout.flush()
@@ -91,33 +141,55 @@ def main(use_tab: bool = False, tab_size: int = 2):
         if key == "CTRL_P" and (mode == MODE.EDIT or mode == MODE.LOG):
             mode = (MODE.EDIT if mode == MODE.LOG else MODE.LOG)
             clear()
+
             if mode == MODE.EDIT:
+                draw_status_line(state, browser)
                 initial_set(state, selectionState)
                 draw_file_browser(browser)
                 print(end='')
                 sys.stdout.flush()
             else:
-                print('DEBUG MODE')   
+                print('DEBUG MODE')
+
             prev_key = key
             continue
+
+        if key == 'ALT+RIGHT':
+            if mode == MODE.FILE_BROWSER:
+                mode = MODE.EDIT
+                draw_status_line(state, browser)
+                initial_set(state, selectionState)
+                draw_file_browser(browser)
+                sys.stdout.flush()
+                prev_key = key
+                continue
+            else:
+                mode = MODE.FILE_BROWSER
+                draw_status_line(state, browser)
+                draw_file_browser(browser)
+                sys.stdout.flush()
+                prev_key = key
+                continue
 
         # TODO use ALT_RIGHT
-        if key == "CTRL_E":
-            mode = MODE.FILE_BROWSER
-            draw_file_browser(browser)
-            sys.stdout.flush()
-            prev_key = key
-            continue
+        # if key == "CTRL_E":
+        #     mode = MODE.FILE_BROWSER
+        #     draw_status_line(state, browser)
+        #     draw_file_browser(browser)
+        #     sys.stdout.flush()
+        #     prev_key = key
+        #     continue
 
-        if key == "CTRL_R":
-            mode = MODE.EDIT
-            initial_set(state, selectionState)
-            draw_file_browser(browser)
-            sys.stdout.flush()
-            prev_key = key
-            continue
+        # if key == "CTRL_R":
+        #     mode = MODE.EDIT
+        #     draw_status_line(state, browser)
+        #     initial_set(state, selectionState)
+        #     draw_file_browser(browser)
+        #     sys.stdout.flush()
+        #     prev_key = key
+        #     continue
 
-        if (key == "CTRL_Z" and prev_key == "CTRL_Z"):
+        if key == "CTRL_Z" and prev_key == "CTRL_Z":
             clear()
             break
 
@@ -127,7 +199,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         if mode == MODE.LOG:
             print(f"{key=}")
 
-            if (key == "CTRL_T" and prev_key == "CTRL_T"):
+            if key == "CTRL_T" and prev_key == "CTRL_T":
                 size = os.get_terminal_size()
 
                 print(
@@ -154,8 +226,9 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 # -------------------------
                 if action == "exit":
                     if key == "y":
-                        save_file(state.file_path, state.doc_lines,)
+                        save_file(state.file_path, state.doc_lines)
                         state.modified = False
+
                     clear()
                     break
 
@@ -172,13 +245,15 @@ def main(use_tab: bool = False, tab_size: int = 2):
                             elif os.path.exists(path):
                                 os.remove(path)
                         except Exception as ex:
-                            print_status(state,str(ex),)
+                            print_status(state, str(ex))
+
                         browser.refresh()
+
                     modal_payload = None
                     mode = MODE.FILE_BROWSER
                     clear()
 
-                    redraw_all(state, selectionState, browser,)
+                    redraw_all(state, selectionState, browser)
                     prev_key = key
                     continue
 
@@ -189,7 +264,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # EDIT MODE
         # -----------------------------------------
         if mode == MODE.EDIT:
-            if (key == "CTRL_Q" and prev_key == "CTRL_Q"):
+            if key == "CTRL_Q" and prev_key == "CTRL_Q":
                 if state.modified:
                     mode = MODE.MODAL
                     modal_payload = {
@@ -199,17 +274,20 @@ def main(use_tab: bool = False, tab_size: int = 2):
                     print_status(state, "Save before exit? y/n")
                     prev_key = key
                     continue
+
                 clear()
                 break
 
             if key == "CTRL_S":
-                save_file(state.file_path, state.doc_lines,)
+                save_file(state.file_path, state.doc_lines)
                 state.modified = False
-                redraw_all(state, selectionState, browser,)
+                redraw_all(state, selectionState, browser)
                 prev_key = key
                 continue
+
+            draw_status_line(state, browser)
             draw_file_browser(browser)
-            process_editor_keys(key, prev_key, state,selectionState,)
+            process_editor_keys(key, prev_key, state, selectionState)
             prev_key = key
             continue
 
@@ -217,9 +295,12 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # FILE BROWSER MODE
         # -----------------------------------------
         if mode == MODE.FILE_BROWSER:
-            result = process_file_browser_key(key, browser,state,)
+            result = process_file_browser_key(key, browser, state)
+
+            draw_status_line(state, browser)
             draw_file_browser(browser)
             sys.stdout.flush()
+
             if result:
                 action, path = result
 
@@ -229,16 +310,22 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 if action == "OPEN_FILE":
                     state.file_path = path
                     state.doc_lines = load_file(path)
+
                     if not state.doc_lines:
                         state.doc_lines = [""]
 
                     state.modified = False
                     state.view_offset = 0
-                    state.cursor_offset = [0,0,]
+                    state.cursor_offset = [0, 0]
+
                     selectionState.clear_selection()
+
                     mode = MODE.EDIT
+
+                    draw_status_line(state, browser)
                     initial_set(state, selectionState)
                     draw_file_browser(browser)
+
                     sys.stdout.flush()
                     prev_key = key
                     continue
@@ -251,18 +338,25 @@ def main(use_tab: bool = False, tab_size: int = 2):
                         "action": "delete",
                         "path": path,
                     }
+
                     mode = MODE.MODAL
+
                     print_status(
                         state,
                         f"Delete '{os.path.basename(path)}'? y/n"
                     )
+
                     prev_key = key
                     continue
 
+            draw_status_line(state, browser)
             draw_file_browser(browser)
+
             prev_key = key
             continue
+
         prev_key = key
+
 
 if __name__ == "__main__":
     main()
