@@ -33,8 +33,8 @@ class MODE(Enum):
 
 
 def trim_path(path: str, max_len: int) -> str:
-    if (len(path) - 3 > max_len): 
-        return '...' + path[-(max_len-3):]
+    if (len(path) - 3 > max_len):
+        return '...' + path[-(max_len - 3):]
     else:
         return fill(path, max_len)
 
@@ -64,12 +64,41 @@ def draw_status_line(state, browser):
 def redraw_all(state, selectionState, browser):
     draw_status_line(state, browser)
     draw_file_browser(browser)
-    initial_set(state, selectionState)
+
+    if state.file_path:
+        initial_set(state, selectionState)
+
+
+def resize_layout(state, browser):
+    size = os.get_terminal_size()
+
+    status_line_width = 1
+    browser_width = 30
+    editor_width = max(
+        1,
+        size.columns - browser_width - status_line_width
+    )
+
+    state.view_box = (
+        browser_width + status_line_width,
+        1,
+        editor_width,
+        size.lines - 1,
+    )
+
+    browser.view_box = (
+        0,
+        1,
+        browser_width,
+        size.lines - 1,
+    )
+
+    browser.refresh()
 
 
 def main(use_tab: bool = False, tab_size: int = 2):
     size = os.get_terminal_size()
-    status_line_width = 1  # There will be a status line between the FileBrowser and TextEditor
+    status_line_width = 1
     browser_width = 30
     editor_width = max(1, size.columns - browser_width - status_line_width)
 
@@ -99,24 +128,11 @@ def main(use_tab: bool = False, tab_size: int = 2):
     if len(sys.argv) > 1:
         path = sys.argv[1]
         if os.stat(path)[0] & 0x4000:
-            # is a directory
             pass
-        else: 
+        else:
             state.file_path = sys.argv[1]
             state.doc_lines = load_file(state.file_path)
             mode = MODE.EDIT
-            # if not state.doc_lines:
-            #     state.doc_lines = [""]
-        
-
-    # TODO define Ctrl+N to create an empty file within a directory
-    # if len(sys.argv) > 1:
-    #     state.file_path = sys.argv[1]
-    #     state.doc_lines = load_file(state.file_path)
-    # else:
-    #     state.file_path = "untitled.txt"
-    # if not state.doc_lines:
-    #     state.doc_lines = [""]
 
     prev_key = None
     modal_payload = None
@@ -126,9 +142,9 @@ def main(use_tab: bool = False, tab_size: int = 2):
 
     if state.file_path:
         initial_set(state, selectionState)
+
     draw_file_browser(browser)
 
-    # Use these 2 lines two draw UI
     print(end='')
     sys.stdout.flush()
 
@@ -136,8 +152,28 @@ def main(use_tab: bool = False, tab_size: int = 2):
         key = get_key()
 
         # -----------------------------------------
+        # Refresh / Resize
+        # -----------------------------------------
+
+        if key == "CTRL_R":
+            resize_layout(state, browser)
+
+            clear()
+            redraw_all(
+                state,
+                selectionState,
+                browser,
+            )
+
+            sys.stdout.flush()
+
+            prev_key = key
+            continue
+
+        # -----------------------------------------
         # Global shortcuts
         # -----------------------------------------
+
         if key == "CTRL_P" and (mode == MODE.EDIT or mode == MODE.LOG):
             mode = (MODE.EDIT if mode == MODE.LOG else MODE.LOG)
             clear()
@@ -171,24 +207,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 prev_key = key
                 continue
 
-        # TODO use ALT_RIGHT
-        # if key == "CTRL_E":
-        #     mode = MODE.FILE_BROWSER
-        #     draw_status_line(state, browser)
-        #     draw_file_browser(browser)
-        #     sys.stdout.flush()
-        #     prev_key = key
-        #     continue
-
-        # if key == "CTRL_R":
-        #     mode = MODE.EDIT
-        #     draw_status_line(state, browser)
-        #     initial_set(state, selectionState)
-        #     draw_file_browser(browser)
-        #     sys.stdout.flush()
-        #     prev_key = key
-        #     continue
-
         if key == "CTRL_Z" and prev_key == "CTRL_Z":
             clear()
             break
@@ -196,6 +214,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # LOG MODE
         # -----------------------------------------
+
         if mode == MODE.LOG:
             print(f"{key=}")
 
@@ -221,9 +240,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
             if modal_payload:
                 action = modal_payload.get("action")
 
-                # -------------------------
-                # Exit confirmation
-                # -------------------------
                 if action == "exit":
                     if key == "y":
                         save_file(state.file_path, state.doc_lines)
@@ -232,9 +248,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
                     clear()
                     break
 
-                # -------------------------
-                # Delete confirmation
-                # -------------------------
                 elif action == "delete":
                     if key == "y":
                         path = modal_payload["path"]
@@ -263,6 +276,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # EDIT MODE
         # -----------------------------------------
+
         if mode == MODE.EDIT:
             if key == "CTRL_Q" and prev_key == "CTRL_Q":
                 if state.modified:
@@ -294,6 +308,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # FILE BROWSER MODE
         # -----------------------------------------
+
         if mode == MODE.FILE_BROWSER:
             result = process_file_browser_key(key, browser, state)
 
@@ -304,9 +319,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
             if result:
                 action, path = result
 
-                # ---------------------
-                # Open file
-                # ---------------------
                 if action == "OPEN_FILE":
                     state.file_path = path
                     state.doc_lines = load_file(path)
@@ -330,9 +342,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
                     prev_key = key
                     continue
 
-                # ---------------------
-                # Delete file
-                # ---------------------
                 elif action == "DELETE":
                     modal_payload = {
                         "action": "delete",

@@ -64,10 +64,27 @@ def process_editor_keys(key, prev_key, state, selectionState):
             selectionState.finalize_selection()
 
     # --------------------------------------------------
+    # Select All
+    # --------------------------------------------------
+
+    if key == "CTRL_A":
+
+        if not state.doc_lines:
+            state.doc_lines = [""]
+
+        last_row = len(state.doc_lines) - 1
+        last_col = len(state.doc_lines[last_row])
+
+        selectionState.clear_selection()
+        selectionState.begin_selection(0, 0)
+        selectionState.update_selection(last_row, last_col)
+        selectionState.finalize_selection()
+
+    # --------------------------------------------------
     # Shift selected block
     # --------------------------------------------------
 
-    if selectionState.has_selection() and key in ("TAB", "[Z"):
+    elif selectionState.has_selection() and key in ("TAB", "[Z"):
 
         if key == "TAB":
             shift_selected_lines(state, selectionState, 1)
