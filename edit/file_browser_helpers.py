@@ -42,6 +42,12 @@ def process_file_browser_key(
         ("DELETE", path)
 
         ("CREATE_DIR", current_directory)
+
+        ("CREATE_FILE", current_directory)
+
+        ("RENAME", path)
+
+        ("FIND", current_directory)
     """
 
     if key == "UP":
@@ -91,5 +97,21 @@ def process_file_browser_key(
             "CREATE_DIR",
             browser.current_path,
         )
+
+    elif key == "CTRL_N":
+
+        return (
+            "CREATE_FILE",
+            browser.current_path,
+        )
+
+    elif key == "CTRL_E":
+
+        return (
+            "RENAME",
+            browser.current_full_path(),
+        )
+    elif key == "CTRL_P":
+        return ("FIND_BY_FNAME",browser.current_path)
 
     return None
