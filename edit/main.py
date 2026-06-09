@@ -96,6 +96,35 @@ def resize_layout(state, browser):
     browser.refresh()
 
 
+def prompt_directory_name():
+    clear()
+
+    print("Enter the name of the directory and press enter")
+    print("> ", end="", flush=True)
+
+    name = ""
+
+    while True:
+        key = get_key()
+
+        if key == "ENTER":
+            print()
+            return name.strip()
+
+        if key == "ESC":
+            return None
+
+        if key == "BACKSPACE":
+            if name:
+                name = name[:-1]
+                print("\b \b", end="", flush=True)
+            continue
+
+        if len(key) == 1:
+            name += key
+            print(key, end="", flush=True)
+
+
 def main(use_tab: bool = False, tab_size: int = 2):
     size = os.get_terminal_size()
     status_line_width = 1
@@ -354,6 +383,42 @@ def main(use_tab: bool = False, tab_size: int = 2):
                         state,
                         f"Delete '{os.path.basename(path)}'? y/n"
                     )
+
+                    prev_key = key
+                    continue
+
+                elif action == "CREATE_DIR":
+                    directory_name = prompt_directory_name()
+
+                    if directory_name:
+                        try:
+                            os.mkdir(
+                                os.path.join(
+                                    path,
+                                    directory_name,
+                                )
+                            )
+                        except Exception as ex:
+                            clear()
+                            redraw_all(
+                                state,
+                                selectionState,
+                                browser,
+                            )
+                            print_status(state, str(ex))
+                            prev_key = key
+                            continue
+
+                    browser.refresh()
+
+                    clear()
+                    redraw_all(
+                        state,
+                        selectionState,
+                        browser,
+                    )
+
+                    sys.stdout.flush()
 
                     prev_key = key
                     continue
