@@ -12,7 +12,10 @@ from .editor_helpers import (
     get_status,
     print_status,
 )
-from .clipboard import copy_to_clipboard, paste_from_clipboard
+from .clipboard import (
+    copy_to_clipboard,
+    paste_from_clipboard,
+)
 
 
 @dataclass
@@ -23,7 +26,62 @@ class EditorResult:
     exit_editor: bool = False
 
 
-def process_editor_keys(key, prev_key, state, selectionState):
+def _display_line(state, doc_y):
+    return state.doc_lines[doc_y].expandtabs(
+        state.tab_size
+    )
+
+
+def _display_to_doc_col(line, display_col, tab_size):
+    """
+    Convert visual column position to real document column.
+
+    Tabs occupy one character in the document but multiple
+    visual columns on screen.
+    """
+    visual = 0
+
+    for doc_col, ch in enumerate(line):
+        if ch == "\t":
+            next_visual = (
+                visual
+                + (tab_size - (visual % tab_size))
+            )
+        else:
+            next_visual = visual + 1
+
+        if display_col < next_visual:
+            return doc_col
+
+        visual = next_visual
+
+    return len(line)
+
+
+def _doc_to_display_col(line, doc_col, tab_size):
+    """
+    Convert document column to visual column.
+    """
+    visual = 0
+
+    for ch in line[:doc_col]:
+        if ch == "\t":
+            visual += (
+                tab_size
+                - (visual % tab_size)
+            )
+        else:
+            visual += 1
+
+    return visual
+
+
+def process_editor_keys(
+    key,
+    prev_key,
+    state,
+    selectionState,
+):
     visual = build_visual_lines(state)
 
     if not visual:
@@ -39,7 +97,16 @@ def process_editor_keys(key, prev_key, state, selectionState):
     doc_y, start_idx, segment = visual[vis_idx]
 
     line = state.doc_lines[doc_y]
-    real_x = start_idx + cx
+
+    display_x = start_idx + cx
+
+    doc_x = _display_to_doc_col(
+        line,
+        display_x,
+        state.tab_size,
+    )
+
+    real_x = doc_x
 
     shift_move = key in (
         "SHIFT+LEFT",
@@ -58,7 +125,10 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
     if shift_move:
         if not selectionState.in_progress:
-            selectionState.begin_selection(doc_y, real_x)
+            selectionState.begin_selection(
+                doc_y,
+                real_x,
+            )
     else:
         if selectionState.in_progress:
             selectionState.finalize_selection()
@@ -73,23 +143,39 @@ def process_editor_keys(key, prev_key, state, selectionState):
             state.doc_lines = [""]
 
         last_row = len(state.doc_lines) - 1
-        last_col = len(state.doc_lines[last_row])
+        last_col = len(
+            state.doc_lines[last_row]
+        )
 
         selectionState.clear_selection()
         selectionState.begin_selection(0, 0)
-        selectionState.update_selection(last_row, last_col)
+        selectionState.update_selection(
+            last_row,
+            last_col,
+        )
         selectionState.finalize_selection()
 
     # --------------------------------------------------
     # Shift selected block
     # --------------------------------------------------
 
-    elif selectionState.has_selection() and key in ("TAB", "[Z"):
+    elif (
+        selectionState.has_selection()
+        and key in ("TAB", "[Z")
+    ):
 
         if key == "TAB":
-            shift_selected_lines(state, selectionState, 1)
+            shift_selected_lines(
+                state,
+                selectionState,
+                1,
+            )
         else:
-            shift_selected_lines(state, selectionState, -1)
+            shift_selected_lines(
+                state,
+                selectionState,
+                -1,
+            )
 
         state.modified = True
 
@@ -101,12 +187,18 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
         if key == "CTRL_C":
             copy_to_clipboard(
-                get_selected_text(state, selectionState)
+                get_selected_text(
+                    state,
+                    selectionState,
+                )
             )
 
         elif key == "CTRL_X":
             copy_to_clipboard(
-                get_selected_text(state, selectionState)
+                get_selected_text(
+                    state,
+                    selectionState,
+                )
             )
 
             pos = delete_selection(
@@ -118,7 +210,10 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 doc_y, real_x = pos
                 state.modified = True
 
-        elif key in ("DELETE", "BACKSPACE"):
+        elif key in (
+            "DELETE",
+            "BACKSPACE",
+        ):
 
             pos = delete_selection(
                 state,
@@ -250,7 +345,9 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
         elif doc_y > 0:
 
-            prev_line = state.doc_lines[doc_y - 1]
+            prev_line = state.doc_lines[
+                doc_y - 1
+            ]
 
             real_x = len(prev_line)
 
@@ -285,7 +382,9 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 state.doc_lines[doc_y + 1]
             )
 
-            state.doc_lines.pop(doc_y + 1)
+            state.doc_lines.pop(
+                doc_y + 1
+            )
 
         state.modified = True
 
@@ -293,45 +392,85 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # Navigation
     # --------------------------------------------------
 
-    elif key in ("LEFT", "SHIFT+LEFT"):
+    elif key in (
+        "LEFT",
+        "SHIFT+LEFT",
+    ):
 
         if real_x > 0:
             real_x -= 1
         elif doc_y > 0:
             doc_y -= 1
-            real_x = len(state.doc_lines[doc_y])
+            real_x = len(
+                state.doc_lines[doc_y]
+            )
 
-    elif key in ("RIGHT", "SHIFT+RIGHT"):
+    elif key in (
+        "RIGHT",
+        "SHIFT+RIGHT",
+    ):
 
-        if real_x < len(line):
+        if real_x < len(
+            state.doc_lines[doc_y]
+        ):
             real_x += 1
         elif doc_y < len(state.doc_lines) - 1:
             doc_y += 1
             real_x = 0
 
-    elif key in ("UP", "SHIFT+UP"):
+    elif key in (
+        "UP",
+        "SHIFT+UP",
+    ):
 
         if doc_y > 0:
-            doc_y -= 1
-            real_x = min(
+            target_display_x = _doc_to_display_col(
+                state.doc_lines[doc_y],
                 real_x,
-                len(state.doc_lines[doc_y]),
+                state.tab_size,
             )
 
-    elif key in ("DOWN", "SHIFT+DOWN"):
+            doc_y -= 1
+
+            real_x = _display_to_doc_col(
+                state.doc_lines[doc_y],
+                target_display_x,
+                state.tab_size,
+            )
+
+    elif key in (
+        "DOWN",
+        "SHIFT+DOWN",
+    ):
 
         if doc_y < len(state.doc_lines) - 1:
-            doc_y += 1
-            real_x = min(
+            target_display_x = _doc_to_display_col(
+                state.doc_lines[doc_y],
                 real_x,
-                len(state.doc_lines[doc_y]),
+                state.tab_size,
             )
 
-    elif key in ("HOME", "SHIFT+HOME"):
+            doc_y += 1
+
+            real_x = _display_to_doc_col(
+                state.doc_lines[doc_y],
+                target_display_x,
+                state.tab_size,
+            )
+
+    elif key in (
+        "HOME",
+        "SHIFT+HOME",
+    ):
         real_x = 0
 
-    elif key in ("END", "SHIFT+END"):
-        real_x = len(state.doc_lines[doc_y])
+    elif key in (
+        "END",
+        "SHIFT+END",
+    ):
+        real_x = len(
+            state.doc_lines[doc_y]
+        )
 
     elif key in (
         "PAGEDOWN",
@@ -379,20 +518,29 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
     visual = build_visual_lines(state)
 
+    display_x = _doc_to_display_col(
+        state.doc_lines[doc_y],
+        real_x,
+        state.tab_size,
+    )
+
     new_vis_idx = 0
 
-    for i, (dy, start, seg) in enumerate(visual):
-
+    for i, (dy, start, seg) in enumerate(
+        visual
+    ):
         if (
             dy == doc_y
-            and start <= real_x <= start + len(seg)
+            and start
+            <= display_x
+            <= start + len(seg)
         ):
             new_vis_idx = i
             break
 
-    dy, start, seg = visual[new_vis_idx]
+    _, start, _ = visual[new_vis_idx]
 
-    cx = real_x - start
+    cx = display_x - start
     cy = new_vis_idx - state.view_offset
 
     if cy < 0:
@@ -418,9 +566,11 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
     ch = ""
 
-    if doc_y < len(state.doc_lines):
-        if real_x < len(state.doc_lines[doc_y]):
-            ch = state.doc_lines[doc_y][real_x]
+    if (
+        doc_y < len(state.doc_lines)
+        and real_x < len(state.doc_lines[doc_y])
+    ):
+        ch = state.doc_lines[doc_y][real_x]
 
     print_status(
         state,
@@ -430,7 +580,11 @@ def process_editor_keys(key, prev_key, state, selectionState):
             real_x,
             ch,
             state.file_path
-            + ("*" if state.modified else ""),
+            + (
+                "*"
+                if state.modified
+                else ""
+            ),
         ),
     )
 
