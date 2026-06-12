@@ -64,9 +64,6 @@ class SelectionState:
     def finalize_selection(self):
         self.in_progress=False
 
-
-import os
-
 class FileBrowserState:
     def __init__(self, start_path=None, view_box=(0,0,30,20)):
         self.current_path = os.path.abspath(

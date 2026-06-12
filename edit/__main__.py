@@ -1,5 +1,5 @@
 from .main import main
-__version__ = '2.2026.06.09'
+__version__ = '3.2026.06.12'
 
 if __name__ == '__main__':
     USE_TAB = False

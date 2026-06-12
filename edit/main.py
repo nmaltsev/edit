@@ -193,12 +193,19 @@ def main(use_tab: bool = False, tab_size: int = 2):
 
     if len(sys.argv) > 1:
         path = sys.argv[1]
-        if os.stat(path)[0] & 0x4000:
+        try:
+            if os.stat(path)[0] & 0x4000:
+                # If the path is a directory
+                browser.current_path = path
+                browser.refresh()
+            else:
+                # if the path is a file
+                state.file_path = sys.argv[1]
+                state.doc_lines = load_file(state.file_path)
+                mode = MODE.EDIT
+        except FileNotFoundError:
+            # Opens in the browser mode with the users home directory
             pass
-        else:
-            state.file_path = sys.argv[1]
-            state.doc_lines = load_file(state.file_path)
-            mode = MODE.EDIT
 
     prev_key = None
     modal_payload = None
