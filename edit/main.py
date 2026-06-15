@@ -170,6 +170,8 @@ def main(use_tab: bool = False, tab_size: int = 2):
     status_line_width = 1
     browser_width = 30
     editor_width = max(1, size.columns - browser_width - status_line_width)
+    # Reserve one terminal row for the editor status bar.
+    editor_height = max(1, size.lines - 2)
 
     state = EditorState(
         use_tab=use_tab,
