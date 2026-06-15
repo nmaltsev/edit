@@ -235,23 +235,15 @@ def main(use_tab: bool = False, tab_size: int = 2):
 
         if key == "CTRL_R":
             resize_layout(state, browser)
-
             clear()
-            redraw_all(
-                state,
-                selectionState,
-                browser,
-            )
-
+            redraw_all(state, selectionState,browser)
             sys.stdout.flush()
-
             prev_key = key
             continue
 
         # -----------------------------------------
         # Global shortcuts
         # -----------------------------------------
-
         if key == "CTRL_P" and (mode == MODE.EDIT or mode == MODE.LOG):
             mode = (MODE.EDIT if mode == MODE.LOG else MODE.LOG)
             clear()
@@ -292,7 +284,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # LOG MODE
         # -----------------------------------------
-
         if mode == MODE.LOG:
             print(f"{key=}")
 
@@ -309,7 +300,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # MODAL MODE
         # -----------------------------------------
-
         if mode == MODE.MODAL:
             if modal_payload:
                 action = modal_payload.get("action")
@@ -327,6 +317,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
                         path = modal_payload["path"]
 
                         try:
+                            # TODO define a new helper function
                             if os.path.isdir(path):
                                 shutil.rmtree(path)
                             elif os.path.exists(path):
@@ -350,14 +341,11 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # EDIT MODE
         # -----------------------------------------
-
         if mode == MODE.EDIT:
             if key == "CTRL_Q" and prev_key == "CTRL_Q":
                 if state.modified:
                     mode = MODE.MODAL
-                    modal_payload = {
-                        "action": "exit"
-                    }
+                    modal_payload = {"action": "exit"}
 
                     print_status(state, "Save before exit? y/n")
                     prev_key = key
