@@ -62,21 +62,24 @@ def resize_layout(state, browser):
     browser_width = 30
     editor_width = max(
         1,
-        size.columns - browser_width - status_line_width
+        size.columns - browser_width - status_line_width,
     )
+
+    # Reserve one terminal row for the editor status bar.
+    editor_height = max(1, size.lines - 2)
 
     state.view_box = (
         browser_width + status_line_width,
         1,
         editor_width,
-        size.lines - 1,
+        editor_height,
     )
 
     browser.view_box = (
         0,
         1,
         browser_width,
-        size.lines - 1,
+        editor_height,
     )
 
     browser.refresh()
@@ -175,7 +178,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
             browser_width + status_line_width,
             1,
             editor_width,
-            size.lines - 1,
+            editor_height,
         ),
     )
 
@@ -184,7 +187,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
             0,
             1,
             browser_width,
-            size.lines - 1,
+            editor_height,
         )
     )
 
