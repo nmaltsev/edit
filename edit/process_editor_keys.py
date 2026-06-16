@@ -224,7 +224,7 @@ def process_editor_keys(
                 doc_y, real_x = pos
                 state.modified = True
 
-        elif len(key) == 1:
+        elif key and not key.startswith("CTRL_") and not key.startswith("ALT+") and not key.startswith("SHIFT+"):
 
             pos = replace_selection(
                 state,

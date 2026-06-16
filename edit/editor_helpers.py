@@ -1,7 +1,5 @@
 import sys
-
 from .utils.kbd import clear, move_cursor
-
 
 def fill(text, max_width):
     if len(text) >= max_width:
@@ -57,6 +55,7 @@ def delete_selection(state, selectionState):
 
 
 def insert_text(state, row, col, text):
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     parts = text.split("\n")
 
     doc_lines = state.doc_lines
@@ -70,7 +69,6 @@ def insert_text(state, row, col, text):
         return row, col + len(text)
 
     doc_lines[row] = before + parts[0]
-
     insert_pos = row + 1
 
     for p in parts[1:-1]:
@@ -134,10 +132,7 @@ def shift_selected_lines(state, selectionState, direction):
             state.doc_lines[y] = indent + state.doc_lines[y]
     else:
         for y in range(r1, r2 + 1):
-            state.doc_lines[y] = _unindent_line(
-                state.doc_lines[y],
-                state,
-            )
+            state.doc_lines[y] = _unindent_line(state.doc_lines[y], state)
 
     return r1, c1
 
@@ -148,7 +143,6 @@ def _expand_tabs(text, tab_size):
 
 def build_visual_lines(state):
     visual = []
-
     width = max(1, state.view_box[2])
     tab_size = state.tab_size
 
@@ -186,20 +180,10 @@ def move_page(state, doc_y, real_x, direction):
     if not visual:
         return 0, 0, visual
 
-    current_vis_idx = find_visual_index(
-        visual,
-        doc_y,
-        real_x,
-    )
-
+    current_vis_idx = find_visual_index(visual, doc_y, real_x)
     _, current_start, _ = visual[current_vis_idx]
-
     cx = real_x - current_start
-
-    target_vis_idx = (
-        current_vis_idx
-        + (direction * state.view_box[3])
-    )
+    target_vis_idx = (current_vis_idx + (direction * state.view_box[3]))
 
     if target_vis_idx < 0:
         target_vis_idx = 0
@@ -211,29 +195,15 @@ def move_page(state, doc_y, real_x, direction):
 
     target_real_x = min(
         target_start + cx,
-        len(
-            _expand_tabs(
-                state.doc_lines[target_dy],
-                state.tab_size,
-            )
-        ),
+        len(_expand_tabs(state.doc_lines[target_dy],state.tab_size)),
     )
 
     return target_dy, target_real_x, visual
 
 
-def fill_view_box(
-    state,
-    view_box,
-    visual_lines,
-    cursor=None,
-):
+def fill_view_box(state, view_box, visual_lines, cursor=None):
     for i in range(view_box[3]):
-        move_cursor(
-            view_box[0],
-            view_box[1] + i,
-        )
-
+        move_cursor(view_box[0], view_box[1] + i)
         idx = state.view_offset + i
 
         if idx < len(visual_lines):
@@ -247,24 +217,14 @@ def fill_view_box(
             if cx >= len(text):
                 text = text + "_"
             else:
-                text = (
-                    text[:cx]
-                    + "_"
-                    + text[cx:]
-                )
+                text = text[:cx] + "_" + text[cx:]
 
         print(fill(text, view_box[2]), end="")
 
     sys.stdout.flush()
 
 
-def get_status(
-    selectionState,
-    doc_y,
-    real_x,
-    ch,
-    path,
-):
+def get_status(selectionState, doc_y, real_x, ch, path):
     """
     Returns the status bar content for Edit mode.
     The status bar displays:
@@ -275,71 +235,28 @@ def get_status(
     """
 
     if selectionState.has_selection():
-        (r1, c1), (r2, c2) = (
-            selectionState.normalize_selection()
-        )
-
-        return (
-            f"({r1 + 1},{c1 + 1},"
-            f"{r2 + 1},{c2 + 1}) {path}"
-        )
-
-    return (
-        f"({doc_y + 1}:{real_x + 1}) "
-        f"{repr(ch)} {path}"
-    )
+        (r1, c1), (r2, c2) = selectionState.normalize_selection()
+        return f"({r1 + 1},{c1 + 1},{r2 + 1},{c2 + 1}) {path}"
+    return f"({doc_y + 1}:{real_x + 1}) {repr(ch)} {path}"
 
 
 def print_status(state, message):
     y = state.view_box[1] + state.view_box[3]
 
-    move_cursor(
-        state.view_box[0],
-        y,
-    )
-
-    print(
-        fill(
-            message,
-            state.view_box[2],
-        ),
-        end="",
-    )
-
+    move_cursor(state.view_box[0], y)
+    print(fill(message, state.view_box[2]), end="")
     sys.stdout.flush()
 
 
 def initial_set(state, selectionState):
     # clear()
-
     visual = build_visual_lines(state)
-
-    fill_view_box(
-        state,
-        state.view_box,
-        visual,
-        cursor=state.cursor_offset,
-    )
-
-    vis_idx = (
-        state.view_offset
-        + state.cursor_offset[1]
-    )
+    fill_view_box(state, state.view_box, visual, cursor=state.cursor_offset,)
+    vis_idx = state.view_offset + state.cursor_offset[1]
 
     if vis_idx >= len(visual):
         vis_idx = len(visual) - 1
 
     doc_y, start_idx, _ = visual[vis_idx]
-
     real_x = start_idx + state.cursor_offset[0]
-
-    print_status(
-        state,
-        get_status(
-            selectionState,
-            doc_y,
-            real_x,
-            "",
-            state.file_path,
-        ),
-    )
+    print_status(state, get_status(selectionState, doc_y, real_x, "", state.file_path))

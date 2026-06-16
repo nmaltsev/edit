@@ -49,6 +49,9 @@ MODIFIERS = {
     8: "CTRL+ALT+SHIFT",
 }
 
+BRACKETED_PASTE_BEGIN = "\x1b[200~"
+BRACKETED_PASTE_END = "\x1b[201~"
+
 
 # =========================================================
 # POSIX KEY READER
@@ -64,12 +67,39 @@ def _read_escape_sequence():
         ch = sys.stdin.read(1)
         seq += ch
 
-        # ANSI sequences typically end with:
-        # letters or '~'
         if ch.isalpha() or ch == "~":
             break
 
     return seq
+
+
+def _read_bracketed_paste():
+    """
+    Read terminal bracketed paste payload.
+    """
+    data = []
+    tail = ""
+
+    while True:
+        ch = sys.stdin.read(1)
+
+        data.append(ch)
+        tail += ch
+
+        if len(tail) > len(BRACKETED_PASTE_END):
+            tail = tail[-len(BRACKETED_PASTE_END):]
+
+        if tail.endswith(BRACKETED_PASTE_END):
+            data = data[:-len(BRACKETED_PASTE_END)]
+            break
+
+    text = "".join(data)
+
+    return (
+        text
+        .replace("\r\n", "\n")
+        .replace("\r", "\n")
+    )
 
 
 def _normalize_modifier_key(modifier, key):
@@ -105,6 +135,9 @@ def _decode_escape_sequence(seq):
 
     if not seq:
         return "ESC"
+
+    if seq == "[200~":
+        return "__BRACKETED_PASTE__"
 
     # ALT + key
     if not seq.startswith("["):
@@ -165,6 +198,7 @@ def _decode_escape_sequence(seq):
     # Navigation keys: [3~
     if body.endswith("~"):
         code = body[:-1]
+
         return ANSI_TILDE_KEYS.get(
             code,
             code,
@@ -187,12 +221,14 @@ def get_key():
         tty.setraw(fd)
 
         ch = sys.stdin.read(1)
-        
 
         # Escape sequence / ALT combinations
         if ch == "\x1b":
             seq = _read_escape_sequence()
-            # print(f'{ch=} {seq=} ')
+
+            if seq == "[200~":
+                return _read_bracketed_paste()
+
             return _decode_escape_sequence(seq)
 
         # Named control keys
