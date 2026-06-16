@@ -1,13 +1,13 @@
 import sys
 import os
-import shutil
 from enum import Enum
-from .utils import get_key, clear
-from .file_helpers import load_file, save_file
+from .utils.kbd import get_key, clear
+from .file_helpers import load_file, save_file, rm_path
 from .state import EditorState, SelectionState, FileBrowserState
 from .editor_helpers import print_status, initial_set, fill
 from .process_editor_keys import process_editor_keys
 from .file_browser_helpers import draw_file_browser, process_file_browser_key
+from .utils.ui import trim_path, trim_name
 
 class MODE(Enum):
     EDIT = 0
@@ -17,15 +17,8 @@ class MODE(Enum):
     TAB_BROWSER = 4
     TERM = 5
 
-
-def trim_path(path: str, max_len: int) -> str:
-    if (len(path) - 3 > max_len):
-        return '...' + path[-(max_len - 3):]
-    else:
-        return fill(path, max_len)
-
-
 def draw_status_line(state, browser):
+    # TODO initialize in a dedicated block
     directory = getattr(browser, "current_path", os.getcwd())
     directory = directory.replace("\\", "/")
 
@@ -46,14 +39,12 @@ def draw_status_line(state, browser):
     print("\033[2K", end="")
     print(status, end="")
 
-
 def redraw_all(state, selectionState, browser):
     draw_status_line(state, browser)
     draw_file_browser(browser)
 
     if state.file_path:
         initial_set(state, selectionState)
-
 
 def resize_layout(state, browser):
     size = os.get_terminal_size()
@@ -84,7 +75,6 @@ def resize_layout(state, browser):
 
     browser.refresh()
 
-
 def prompt_text(message):
     clear()
 
@@ -112,18 +102,6 @@ def prompt_text(message):
         if len(key) == 1:
             value += key
             print(key, end="", flush=True)
-
-def prompt_new_name(old_name):
-    return prompt_text(
-        f"Rename '{old_name}'"
-    )
-
-
-def prompt_search_pattern():
-    return prompt_text(
-        "Enter file name pattern and press enter"
-    )
-
 
 def find_files(root_path, pattern):
     results = []
@@ -159,9 +137,7 @@ def show_find_results(results):
     get_key()
 
 def confirm_delete(path):
-    answer = prompt_text(
-        f"Delete '{os.path.basename(path)}'? (y/n)"
-    )
+    answer = prompt_text(f"Delete '{os.path.basename(path)}'? (y/n)")
 
     return answer and answer.lower() == "y"
 
@@ -210,7 +186,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 mode = MODE.EDIT
         except FileNotFoundError:
             # Opens in the browser mode with the users home directory
-            pass
+            browser.current_path = os.getcwd()
 
     prev_key = None
     modal_payload = None
@@ -222,7 +198,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
         initial_set(state, selectionState)
 
     draw_file_browser(browser)
-
     print(end='')
     sys.stdout.flush()
 
@@ -232,7 +207,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # Refresh / Resize
         # -----------------------------------------
-
         if key == "CTRL_R":
             resize_layout(state, browser)
             clear()
@@ -314,14 +288,8 @@ def main(use_tab: bool = False, tab_size: int = 2):
 
                 elif action == "delete":
                     if key == "y":
-                        path = modal_payload["path"]
-
                         try:
-                            # TODO define a new helper function
-                            if os.path.isdir(path):
-                                shutil.rmtree(path)
-                            elif os.path.exists(path):
-                                os.remove(path)
+                            rm_path(modal_payload["path"])
                         except Exception as ex:
                             print_status(state, str(ex))
 
@@ -422,11 +390,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 elif action == "DELETE":
                     if confirm_delete(path):
                         try:
-                            if os.path.isdir(path):
-                                shutil.rmtree(path)
-                            elif os.path.exists(path):
-                                os.remove(path)
-
+                            rm_path(path)
                         except Exception as ex:
                             clear()
                             redraw_all(
@@ -439,7 +403,6 @@ def main(use_tab: bool = False, tab_size: int = 2):
                             continue
 
                     browser.refresh()
-
                     clear()
                     redraw_all(state, selectionState, browser)
 
@@ -451,19 +414,10 @@ def main(use_tab: bool = False, tab_size: int = 2):
 
                     if directory_name:
                         try:
-                            os.mkdir(
-                                os.path.join(
-                                    path,
-                                    directory_name,
-                                )
-                            )
+                            os.mkdir(os.path.join(path, directory_name))
                         except Exception as ex:
                             clear()
-                            redraw_all(
-                                state,
-                                selectionState,
-                                browser,
-                            )
+                            redraw_all(state, selectionState, browser)
                             print_status(state, str(ex))
                             prev_key = key
                             continue
@@ -471,14 +425,8 @@ def main(use_tab: bool = False, tab_size: int = 2):
                     browser.refresh()
 
                     clear()
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
-
+                    redraw_all(state, selectionState, browser)
                     sys.stdout.flush()
-
                     prev_key = key
                     continue
 
@@ -506,11 +454,11 @@ def main(use_tab: bool = False, tab_size: int = 2):
                     prev_key = key
                     continue
                 elif action == "RENAME":
-                    new_name = prompt_new_name(os.path.basename(path))
+                    new_name = prompt_text(f"Rename '{os.path.basename(path)}'")
 
                     if new_name:
                         try:
-                            target = os.path.join(os.path.dirname(path), new_name,)
+                            target = os.path.join(os.path.dirname(path), new_name)
                             os.rename(path, target)
                         except Exception as ex:
                             clear()
@@ -522,33 +470,19 @@ def main(use_tab: bool = False, tab_size: int = 2):
                     browser.refresh()
 
                     clear()
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
-
+                    redraw_all(state, selectionState, browser)
                     prev_key = key
                     continue
 
                 elif action == "FIND_BY_FNAME":
-                    pattern = prompt_search_pattern()
+                    pattern = prompt_text("Enter file name pattern and press enter")
 
                     if pattern:
-                        results = find_files(
-                            path,
-                            pattern,
-                        )
-
+                        results = find_files(path, pattern)
                         show_find_results(results)
 
                     clear()
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
-
+                    redraw_all(state, selectionState,browser, )
                     prev_key = key
                     continue
 

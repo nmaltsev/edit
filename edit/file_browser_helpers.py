@@ -1,6 +1,6 @@
 import os
 
-from .utils import move_cursor
+from .utils.kbd import move_cursor
 from .editor_helpers import fill
 from .file_helpers import load_file
 

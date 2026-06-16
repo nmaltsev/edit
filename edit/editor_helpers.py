@@ -1,6 +1,6 @@
 import sys
 
-from .utils import clear, move_cursor
+from .utils.kbd import clear, move_cursor
 
 
 def fill(text, max_width):
