@@ -65,7 +65,13 @@ JS_KEYWORDS = {
     "async",
     "await",
     "from",
+    "try",
+    "catch",
+    "finally",
+    "throw",
+    "default",
 }
+
 
 PHP_KEYWORDS = {
     "function",
@@ -86,6 +92,27 @@ PHP_KEYWORDS = {
     "use",
     "trait",
     "interface",
+}
+
+
+DOCKERFILE_KEYWORDS = {
+    "FROM",
+    "RUN",
+    "CMD",
+    "ENTRYPOINT",
+    "WORKDIR",
+    "COPY",
+    "ADD",
+    "ENV",
+    "ARG",
+    "LABEL",
+    "EXPOSE",
+    "USER",
+    "VOLUME",
+    "SHELL",
+    "STOPSIGNAL",
+    "HEALTHCHECK",
+    "ONBUILD",
 }
 
 
@@ -111,6 +138,9 @@ def get_language(path):
 
     if filename in SUPPORTED_FILENAMES:
         return SUPPORTED_FILENAMES[filename]
+
+    if filename.endswith(".Dockerfile"):
+        return "dockerfile"
 
     _, ext = os.path.splitext(filename)
 
@@ -314,6 +344,36 @@ def _css_spans(text):
     return spans
 
 
+def _jsx_html_spans(text):
+    spans = []
+
+    spans.extend(
+        _build_spans(
+            r"</?[A-Za-z_][A-Za-z0-9_.:-]*",
+            "tag",
+            text,
+        )
+    )
+
+    spans.extend(
+        _build_spans(
+            r'=\s*"(?:\\.|[^"\\])*"',
+            "string",
+            text,
+        )
+    )
+
+    spans.extend(
+        _build_spans(
+            r"=\s*'(?:\\.|[^'\\])*'",
+            "string",
+            text,
+        )
+    )
+
+    return spans
+
+
 def _javascript_spans(text):
     spans = []
 
@@ -349,6 +409,10 @@ def _javascript_spans(text):
             "number",
             text,
         )
+    )
+
+    spans.extend(
+        _jsx_html_spans(text)
     )
 
     for kw in JS_KEYWORDS:
@@ -422,6 +486,40 @@ def _php_spans(text):
     return spans
 
 
+def _dockerfile_spans(text):
+    spans = []
+
+    spans.extend(
+        _build_spans(
+            r"#.*$",
+            "comment",
+            text,
+            re.MULTILINE,
+        )
+    )
+
+    spans.extend(
+        _build_spans(
+            STRING_PATTERN,
+            "string",
+            text,
+            re.DOTALL,
+        )
+    )
+
+    for kw in DOCKERFILE_KEYWORDS:
+        spans.extend(
+            _build_spans(
+                rf"^{kw}\b",
+                "keyword",
+                text,
+                re.MULTILINE,
+            )
+        )
+
+    return spans
+
+
 def tokenize_line(path, text):
     if not ENABLE_SYNTAX_HIGHLIGHTING:
         return []
@@ -443,11 +541,19 @@ def tokenize_line(path, text):
     if language == "css":
         return _css_spans(text)
 
-    if language in ("javascript", "jsx", "typescript", "tsx"):
+    if language in (
+        "javascript",
+        "jsx",
+        "typescript",
+        "tsx",
+    ):
         return _javascript_spans(text)
 
     if language == "php":
         return _php_spans(text)
+
+    if language == "dockerfile":
+        return _dockerfile_spans(text)
 
     return []
 
