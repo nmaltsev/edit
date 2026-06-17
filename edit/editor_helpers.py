@@ -1,6 +1,7 @@
 import sys
 from .utils.kbd import clear, move_cursor
 from .utils.text import fill
+from .syntax_highlighting import render_line
 
 def get_selected_text(state, selectionState):
     r = selectionState.normalize_selection()
@@ -198,6 +199,7 @@ def move_page(state, doc_y, real_x, direction):
 def fill_view_box(state, view_box, visual_lines, cursor=None):
     for i in range(view_box[3]):
         move_cursor(view_box[0], view_box[1] + i)
+
         idx = state.view_offset + i
 
         if idx < len(visual_lines):
@@ -205,15 +207,32 @@ def fill_view_box(state, view_box, visual_lines, cursor=None):
         else:
             text = ""
 
+        cursor_text = text
+
         if cursor and i == cursor[1]:
             cx = cursor[0]
 
-            if cx >= len(text):
-                text = text + "_"
+            if cx >= len(cursor_text):
+                cursor_text = cursor_text + "_"
             else:
-                text = text[:cx] + "_" + text[cx:]
+                cursor_text = (
+                    cursor_text[:cx]
+                    + "_"
+                    + cursor_text[cx:]
+                )
 
-        print(fill(text, view_box[2]), end="")
+        rendered = render_line(
+            state.file_path,
+            cursor_text,
+        )
+
+        print(
+            fill(
+                rendered,
+                view_box[2],
+            ),
+            end="",
+        )
 
     sys.stdout.flush()
 
