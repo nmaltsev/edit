@@ -1,12 +1,6 @@
 import sys
 from .utils.kbd import clear, move_cursor
-
-def fill(text, max_width):
-    if len(text) >= max_width:
-        return text[0:max_width]
-    else:
-        return text + " " * (max_width - len(text))
-
+from .utils.text import fill
 
 def get_selected_text(state, selectionState):
     r = selectionState.normalize_selection()

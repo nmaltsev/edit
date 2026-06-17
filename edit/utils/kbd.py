@@ -105,13 +105,6 @@ def _read_bracketed_paste():
 def _normalize_modifier_key(modifier, key):
     """
     Normalize combinations to match editor expectations.
-
-    ALT+SHIFT+ARROW  -> SHIFT+ARROW
-    CTRL+SHIFT+ARROW -> CTRL+ARROW
-    CTRL+ALT+ARROW   -> CTRL+ARROW
-
-    SHIFT+PAGE_UP/DOWN -> PAGE_UP/DOWN
-    CTRL+SHIFT+PAGE_UP/DOWN -> PAGE_UP/DOWN
     """
 
     if key in ("UP", "DOWN", "LEFT", "RIGHT"):
@@ -139,7 +132,6 @@ def _decode_escape_sequence(seq):
     if seq == "[200~":
         return "__BRACKETED_PASTE__"
 
-    # ALT + key
     if not seq.startswith("["):
         if len(seq) == 1:
             ch = seq
@@ -154,11 +146,9 @@ def _decode_escape_sequence(seq):
 
     body = seq[1:]
 
-    # Simple arrows: [A
     if body in ANSI_KEYS:
         return ANSI_KEYS[body]
 
-    # Modified keys: [1;2D
     if ";" in body:
         _, rest = body.split(";", 1)
 
@@ -195,7 +185,6 @@ def _decode_escape_sequence(seq):
             key,
         )
 
-    # Navigation keys: [3~
     if body.endswith("~"):
         code = body[:-1]
 
@@ -211,8 +200,6 @@ def _decode_escape_sequence(seq):
 # MAIN API
 # =========================================================
 
-# TODO debug get_ley in a loop with the exit by `Q`
-#  It does not detect ESC
 def get_key():
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
@@ -222,7 +209,6 @@ def get_key():
 
         ch = sys.stdin.read(1)
 
-        # Escape sequence / ALT combinations
         if ch == "\x1b":
             seq = _read_escape_sequence()
 
@@ -231,16 +217,11 @@ def get_key():
 
             return _decode_escape_sequence(seq)
 
-        # Named control keys
-        #
-        # Must be checked BEFORE CTRL+A..CTRL+Z
-        # otherwise TAB/ENTER become CTRL_I/CTRL_J/CTRL_M.
         if ch in CTRL_KEYS:
             return CTRL_KEYS[ch]
 
         code = ord(ch)
 
-        # CTRL+A ... CTRL+Z
         if 1 <= code <= 26:
             return f"CTRL_{chr(code + 64)}"
 

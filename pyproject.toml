@@ -1,0 +1,6 @@
+[project]
+name = "edit"
+version = "0.1.0"
+
+[project.scripts]
+edit = "edit.main:main"

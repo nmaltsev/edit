@@ -4,7 +4,7 @@ from enum import Enum
 from .utils.kbd import get_key, clear
 from .file_helpers import load_file, save_file, rm_path
 from .state import EditorState, SelectionState, FileBrowserState
-from .editor_helpers import print_status, initial_set, fill
+from .editor_helpers import print_status, initial_set
 from .process_editor_keys import process_editor_keys
 from .file_browser_helpers import draw_file_browser, process_file_browser_key
 from .utils.ui import trim_path, trim_name
@@ -138,8 +138,32 @@ def show_find_results(results):
 
 def confirm_delete(path):
     answer = prompt_text(f"Delete '{os.path.basename(path)}'? (y/n)")
-
     return answer and answer.lower() == "y"
+
+
+def reset_editor(state, selectionState):
+    state.doc_lines = [""]
+    state.file_path = None
+    state.modified = False
+    state.view_offset = 0
+    state.cursor_offset = [0, 0]
+
+    selectionState.clear_selection()
+
+
+def open_editor_file(state, selectionState, path):
+    state.file_path = path
+    state.doc_lines = load_file(path)
+
+    if not state.doc_lines:
+        state.doc_lines = [""]
+
+    state.modified = False
+    state.view_offset = 0
+    state.cursor_offset = [0, 0]
+
+    selectionState.clear_selection()
+
 
 def main(use_tab: bool = False, tab_size: int = 2):
     size = os.get_terminal_size()
@@ -180,12 +204,14 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 browser.current_path = path
                 browser.refresh()
             else:
-                # if the path is a file
-                state.file_path = sys.argv[1]
-                state.doc_lines = load_file(state.file_path)
+                open_editor_file(
+                    state,
+                    selectionState,
+                    path,
+                )
                 mode = MODE.EDIT
+
         except FileNotFoundError:
-            # Opens in the browser mode with the users home directory
             browser.current_path = os.getcwd()
 
     prev_key = None
@@ -198,7 +224,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         initial_set(state, selectionState)
 
     draw_file_browser(browser)
-    print(end='')
+    print(end="")
     sys.stdout.flush()
 
     while True:
@@ -210,7 +236,7 @@ def main(use_tab: bool = False, tab_size: int = 2):
         if key == "CTRL_R":
             resize_layout(state, browser)
             clear()
-            redraw_all(state, selectionState,browser)
+            redraw_all(state, selectionState, browser)
             sys.stdout.flush()
             prev_key = key
             continue
@@ -226,34 +252,35 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 draw_status_line(state, browser)
                 initial_set(state, selectionState)
                 draw_file_browser(browser)
-                print(end='')
+                print(end="")
                 sys.stdout.flush()
             else:
-                print('DEBUG MODE')
+                print("DEBUG MODE")
 
             prev_key = key
             continue
 
-        if key == 'ALT+RIGHT':
+        if key == "ALT+RIGHT":
             if mode == MODE.FILE_BROWSER:
                 mode = MODE.EDIT
+
                 draw_status_line(state, browser)
-                initial_set(state, selectionState)
+
+                if state.file_path:
+                    initial_set(state, selectionState)
+
                 draw_file_browser(browser)
-                sys.stdout.flush()
-                prev_key = key
-                continue
-            else:
-                mode = MODE.FILE_BROWSER
-                draw_status_line(state, browser)
-                draw_file_browser(browser)
+
                 sys.stdout.flush()
                 prev_key = key
                 continue
 
-        if key == "CTRL_Z" and prev_key == "CTRL_Z":
-            clear()
-            break
+            mode = MODE.FILE_BROWSER
+            draw_status_line(state, browser)
+            draw_file_browser(browser)
+            sys.stdout.flush()
+            prev_key = key
+            continue
 
         # -----------------------------------------
         # LOG MODE
@@ -278,28 +305,46 @@ def main(use_tab: bool = False, tab_size: int = 2):
             if modal_payload:
                 action = modal_payload.get("action")
 
-                if action == "exit":
+                if action == "CLOSE_EDITOR":
                     if key == "y":
-                        save_file(state.file_path, state.doc_lines)
-                        state.modified = False
+                        if state.file_path and state.file_path != "Untitled":
+                            save_file(
+                                state.file_path,
+                                state.doc_lines,
+                            )
 
-                    clear()
-                    break
+                    reset_editor(
+                        state,
+                        selectionState,
+                    )
 
-                elif action == "delete":
-                    if key == "y":
-                        try:
-                            rm_path(modal_payload["path"])
-                        except Exception as ex:
-                            print_status(state, str(ex))
-
-                        browser.refresh()
-
-                    modal_payload = None
                     mode = MODE.FILE_BROWSER
-                    clear()
 
-                    redraw_all(state, selectionState, browser)
+                    clear()
+                    redraw_all(
+                        state,
+                        selectionState,
+                        browser,
+                    )
+
+                    prev_key = key
+                    continue
+
+                if action == "EXIT_APP":
+                    if key == "y":
+                        clear()
+                        break
+
+                    mode = MODE.FILE_BROWSER
+                    modal_payload = None
+
+                    clear()
+                    redraw_all(
+                        state,
+                        selectionState,
+                        browser,
+                    )
+
                     prev_key = key
                     continue
 
@@ -310,20 +355,106 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # EDIT MODE
         # -----------------------------------------
         if mode == MODE.EDIT:
-            if key == "CTRL_Q" and prev_key == "CTRL_Q":
+
+            if key == "CTRL_Q":
                 if state.modified:
                     mode = MODE.MODAL
-                    modal_payload = {"action": "exit"}
+                    modal_payload = {
+                        "action": "CLOSE_EDITOR",
+                    }
 
-                    print_status(state, "Save before exit? y/n")
+                    print_status(
+                        state,
+                        "Save before close? y/n",
+                    )
+
                     prev_key = key
                     continue
 
+                reset_editor(
+                    state,
+                    selectionState,
+                )
+
+                mode = MODE.FILE_BROWSER
+
                 clear()
-                break
+                redraw_all(
+                    state,
+                    selectionState,
+                    browser,
+                )
+
+                prev_key = key
+                continue
+
+            if key == "ALT+S":
+                target = prompt_text(
+                    "Save as file name"
+                )
+
+                if target:
+                    try:
+                        save_file(
+                            target,
+                            state.doc_lines,
+                        )
+
+                        state.file_path = target
+                        state.modified = False
+
+                    except Exception as ex:
+                        clear()
+                        redraw_all(
+                            state,
+                            selectionState,
+                            browser,
+                        )
+                        print_status(
+                            state,
+                            str(ex),
+                        )
+
+                        prev_key = key
+                        continue
+
+                clear()
+                redraw_all(
+                    state,
+                    selectionState,
+                    browser,
+                )
+
+                prev_key = key
+                continue
 
             if key == "CTRL_S":
-                save_file(state.file_path, state.doc_lines)
+                if (
+                    not state.file_path
+                    or state.file_path == "Untitled"
+                ):
+                    target = prompt_text(
+                        "Save as file name"
+                    )
+
+                    if not target:
+                        clear()
+                        redraw_all(
+                            state,
+                            selectionState,
+                            browser,
+                        )
+
+                        prev_key = key
+                        continue
+
+                    state.file_path = target
+
+                save_file(
+                    state.file_path,
+                    state.doc_lines,
+                )
+
                 state.modified = False
                 redraw_all(state, selectionState, browser)
                 prev_key = key
@@ -338,9 +469,57 @@ def main(use_tab: bool = False, tab_size: int = 2):
         # -----------------------------------------
         # FILE BROWSER MODE
         # -----------------------------------------
-
         if mode == MODE.FILE_BROWSER:
-            result = process_file_browser_key(key, browser, state)
+
+            if key == "CTRL_Q":
+                if prev_key == "CTRL_Q":
+                    clear()
+                    break
+
+                print_status(
+                    state,
+                    "Press CTRL_Q again to exit",
+                )
+
+                prev_key = key
+                continue
+
+            if key == "ALT+N":
+                reset_editor(
+                    state,
+                    selectionState,
+                )
+
+                state.file_path = "Untitled"
+
+                mode = MODE.EDIT
+
+                clear()
+
+                draw_status_line(
+                    state,
+                    browser,
+                )
+
+                initial_set(
+                    state,
+                    selectionState,
+                )
+
+                draw_file_browser(
+                    browser,
+                )
+
+                sys.stdout.flush()
+
+                prev_key = key
+                continue
+
+            result = process_file_browser_key(
+                key,
+                browser,
+                state,
+            )
 
             draw_status_line(state, browser)
             draw_file_browser(browser)
@@ -350,43 +529,33 @@ def main(use_tab: bool = False, tab_size: int = 2):
                 action, path = result
 
                 if action == "OPEN_FILE":
-                    state.file_path = path
-                    state.doc_lines = load_file(path)
-
-                    if not state.doc_lines:
-                        state.doc_lines = [""]
-
-                    state.modified = False
-                    state.view_offset = 0
-                    state.cursor_offset = [0, 0]
-
-                    selectionState.clear_selection()
+                    open_editor_file(
+                        state,
+                        selectionState,
+                        path,
+                    )
 
                     mode = MODE.EDIT
 
-                    draw_status_line(state, browser)
-                    initial_set(state, selectionState)
-                    draw_file_browser(browser)
+                    draw_status_line(
+                        state,
+                        browser,
+                    )
+
+                    initial_set(
+                        state,
+                        selectionState,
+                    )
+
+                    draw_file_browser(
+                        browser,
+                    )
 
                     sys.stdout.flush()
+
                     prev_key = key
                     continue
 
-                # elif action == "DELETE":
-                #     modal_payload = {
-                #         "action": "delete",
-                #         "path": path,
-                #     }
-
-                #     mode = MODE.MODAL
-
-                #     print_status(
-                #         state,
-                #         f"Delete '{os.path.basename(path)}'? y/n"
-                #     )
-
-                #     prev_key = key
-                #     continue
                 elif action == "DELETE":
                     if confirm_delete(path):
                         try:
