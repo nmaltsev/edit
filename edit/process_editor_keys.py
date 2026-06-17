@@ -111,8 +111,12 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # Selection operations
     # --------------------------------------------------
     elif selectionState.has_selection():
+        selection_consumed = False
+
         if key == "CTRL_C":
             copy_to_clipboard(get_selected_text(state, selectionState))
+
+            selection_consumed = True
 
         elif key == "CTRL_X":
             copy_to_clipboard(get_selected_text(state, selectionState))
@@ -122,6 +126,8 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 doc_y, real_x = pos
                 state.modified = True
 
+            selection_consumed = True
+
         elif key in ("DELETE", "BACKSPACE"):
             pos = delete_selection(state, selectionState)
 
@@ -129,15 +135,74 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 doc_y, real_x = pos
                 state.modified = True
 
-        elif key and not key.startswith("CTRL_") and not key.startswith("ALT+") and not key.startswith("SHIFT+"):
+            selection_consumed = True
+        elif key == "CTRL_V":
+            text = paste_from_clipboard()
+
+            pos = replace_selection(state, selectionState, text)
+
+            if pos:
+                doc_y, real_x = pos
+                state.modified = True
+
+            selection_consumed = True
+
+        elif (
+            len(key) == 1
+            and not key.startswith("CTRL_")
+            and not key.startswith("ALT+")
+            and not key.startswith("SHIFT+")
+        ):
             pos = replace_selection(state, selectionState, key)
 
             if pos:
                 doc_y, real_x = pos
                 state.modified = True
 
+            selection_consumed = True
+
         elif not shift_move:
             selectionState.clear_selection()
+
+        if selection_consumed:
+            visual = build_visual_lines(state)
+
+            if not visual:
+                visual = [(0, 0, "")]
+
+            display_x = _doc_to_display_col(state.doc_lines[doc_y], real_x, state.tab_size)
+            new_vis_idx = 0
+
+            for i, (dy, start, seg) in enumerate(visual):
+                if (dy == doc_y and start <= display_x <= start + len(seg)):
+                    new_vis_idx = i
+                    break
+
+            _, start, _ = visual[new_vis_idx]
+
+            cx = display_x - start
+            cy = new_vis_idx - state.view_offset
+
+            if cy < 0:
+                state.view_offset = new_vis_idx
+                cy = 0
+
+            elif cy >= state.view_box[3]:
+                state.view_offset = (new_vis_idx - state.view_box[3] + 1)
+                cy = state.view_box[3] - 1
+
+            state.cursor_offset = [cx, cy]
+
+            fill_view_box(state, state.view_box, visual, cursor=(cx, cy))
+
+            ch = ""
+
+            if (doc_y < len(state.doc_lines) and real_x < len(state.doc_lines[doc_y])):
+                ch = state.doc_lines[doc_y][real_x]
+
+            print_status(state, get_status(selectionState, doc_y, real_x, ch, state.file_path + ("*" if state.modified else "")))
+
+            return EditorResult(doc_y=doc_y, real_x=real_x, visual=visual)
 
     # --------------------------------------------------
     # Paste
