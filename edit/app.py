@@ -1,0 +1,255 @@
+import os
+import sys
+from enum import Enum
+
+from .utils.kbd import get_key, clear
+from .utils.layout import draw_status_line, redraw_all, resize_layout
+from .state import EditorState, SelectionState, FileBrowserState
+from .editor_helpers import initial_set, print_status
+from .file_browser_helpers import draw_file_browser
+from .process_editor_keys import process_editor_keys
+from .controllers.edit_controller import handle_edit_mode
+from .controllers.file_browser_controller import handle_file_browser_mode
+from .controllers.modal_controller import handle_modal_mode
+from .controllers.log_controller import handle_log_mode
+from .utils.layout import open_editor_file
+
+
+class MODE(Enum):
+    EDIT = 0
+    LOG = 1
+    MODAL = 2
+    FILE_BROWSER = 3
+    TAB_BROWSER = 4
+    TERM = 5
+
+
+class EditorApplication:
+
+    def __init__(self, use_tab: bool = False, tab_size: int = 2):
+        size = os.get_terminal_size()
+        status_line_width = 1
+        browser_width = 30
+        editor_width = max(1, size.columns - browser_width - status_line_width)
+
+        # Reserve one terminal row for the editor status bar.
+        editor_height = max(1, size.lines - 2)
+
+        self.state = EditorState(
+            use_tab=use_tab,
+            tab_size=tab_size,
+            view_box=(
+                browser_width + status_line_width,
+                1,
+                editor_width,
+                editor_height,
+            ),
+        )
+
+        self.browser = FileBrowserState(
+            view_box=(
+                0,
+                1,
+                browser_width,
+                editor_height,
+            )
+        )
+
+        self.selectionState = SelectionState()
+        self.mode = MODE.FILE_BROWSER
+        self.prev_key = None
+        self.modal_payload = None
+
+    def initialize(self):
+        if len(sys.argv) > 1:
+            path = sys.argv[1]
+
+            try:
+                if os.stat(path)[0] & 0x4000:
+                    # If the path is a directory
+                    self.browser.current_path = path
+                    self.browser.refresh()
+                else:
+                    open_editor_file(
+                        self.state,
+                        self.selectionState,
+                        path,
+                    )
+                    self.mode = MODE.EDIT
+
+            except FileNotFoundError:
+                self.browser.current_path = os.getcwd()
+
+        clear()
+        draw_status_line(self.state, self.browser)
+
+        if self.state.file_path:
+            initial_set(self.state, self.selectionState)
+
+        draw_file_browser(self.browser)
+        print(end="")
+        sys.stdout.flush()
+
+    def handle_refresh(self, key):
+        if key != "CTRL_R":
+            return False
+
+        # TODO process_redraw()
+        resize_layout(self.state, self.browser)
+        clear()
+        redraw_all(
+            self.state,
+            self.selectionState,
+            self.browser,
+        )
+
+        sys.stdout.flush()
+        self.prev_key = key
+
+        return True
+
+    def handle_global_shortcuts(self, key):
+        if key == "CTRL_P" and (
+            self.mode == MODE.EDIT
+            or self.mode == MODE.LOG
+        ):
+            self.mode = (
+                MODE.EDIT
+                if self.mode == MODE.LOG
+                else MODE.LOG
+            )
+
+            #  TODO process_
+            clear()
+
+            if self.mode == MODE.EDIT:
+                draw_status_line(
+                    self.state,
+                    self.browser,
+                )
+
+                initial_set(
+                    self.state,
+                    self.selectionState,
+                )
+
+                draw_file_browser(
+                    self.browser,
+                )
+
+                print(end="")
+                sys.stdout.flush()
+            else:
+                print("DEBUG MODE")
+
+            self.prev_key = key
+            return True
+
+        if key == "ALT+RIGHT":
+            if self.mode == MODE.FILE_BROWSER:
+                self.mode = MODE.EDIT
+
+                draw_status_line(
+                    self.state,
+                    self.browser,
+                )
+
+                if self.state.file_path:
+                    initial_set(
+                        self.state,
+                        self.selectionState,
+                    )
+
+                draw_file_browser(
+                    self.browser,
+                )
+
+                sys.stdout.flush()
+                self.prev_key = key
+                return True
+
+            self.mode = MODE.FILE_BROWSER
+
+            draw_status_line(
+                self.state,
+                self.browser,
+            )
+
+            draw_file_browser(
+                self.browser,
+            )
+
+            sys.stdout.flush()
+            self.prev_key = key
+            return True
+
+        return False
+
+    def run(self):
+        self.initialize()
+
+        while True:
+            key = get_key()
+
+            if self.handle_refresh(key):
+                continue
+
+            if self.handle_global_shortcuts(key):
+                continue
+
+            if self.mode == MODE.LOG:
+                if handle_log_mode(
+                    key,
+                    self.prev_key,
+                ):
+                    break
+
+                self.prev_key = key
+                continue
+
+            if self.mode == MODE.MODAL:
+                should_break, self.mode, self.modal_payload = handle_modal_mode(
+                    key,
+                    self.mode,
+                    self.modal_payload,
+                    self.state,
+                    self.selectionState,
+                    self.browser,
+                )
+
+                if should_break:
+                    break
+
+                self.prev_key = key
+                continue
+
+            if self.mode == MODE.EDIT:
+                self.mode, self.modal_payload = handle_edit_mode(
+                    key,
+                    self.mode,
+                    self.modal_payload,
+                    self.state,
+                    self.selectionState,
+                    self.browser,
+                )
+
+                self.prev_key = key
+                continue
+
+            if self.mode == MODE.FILE_BROWSER:
+                should_break, self.mode = handle_file_browser_mode(
+                    key,
+                    self.prev_key,
+                    self.mode,
+                    self.state,
+                    self.selectionState,
+                    self.browser,
+                )
+
+                if should_break:
+                    break
+
+                self.prev_key = key
+                continue
+
+            self.prev_key = key
