@@ -1,6 +1,6 @@
 from .main import main
 from .syntax_highlighting import ENABLE_SYNTAX_HIGHLIGHTING
-__version__ = '5.2026.06.17'
+__version__ = '6.2026.06.24'
 
 if __name__ == '__main__':
     USE_TAB = False

@@ -85,7 +85,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     # Select All
     # --------------------------------------------------
-
     if key == "CTRL_A":
         if not state.doc_lines:
             state.doc_lines = [""]
@@ -138,7 +137,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
             selection_consumed = True
         elif key == "CTRL_V":
             text = paste_from_clipboard()
-
             pos = replace_selection(state, selectionState, text)
 
             if pos:
@@ -326,7 +324,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     # Rebuild screen
     # --------------------------------------------------
-
     visual = build_visual_lines(state)
     display_x = _doc_to_display_col(state.doc_lines[doc_y], real_x, state.tab_size)
     new_vis_idx = 0
@@ -354,7 +351,16 @@ def process_editor_keys(key, prev_key, state, selectionState):
     if (doc_y < len(state.doc_lines) and real_x < len(state.doc_lines[doc_y])):
         ch = state.doc_lines[doc_y][real_x]
 
-    print_status(state, get_status(selectionState, doc_y, real_x, ch, state.file_path + ("*" if state.modified else "")))
+    print_status(
+        state, 
+        get_status(
+            selectionState, 
+            doc_y, 
+            real_x, 
+            ch, 
+            (state.file_path + ("*" if state.modified else "") if state.file_path is not None else "")
+        )
+    )
 
     return EditorResult(
         doc_y=doc_y,

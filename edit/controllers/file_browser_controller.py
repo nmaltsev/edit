@@ -159,9 +159,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             return False, mode
 
         elif action == "CREATE_FILE":
-            filename = prompt_text(
-                "Enter the name of the file and press enter"
-            )
+            filename = prompt_text("Enter the name of the file and press enter")
 
             if filename:
                 try:
@@ -172,33 +170,18 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
                     with open(full_path, "w", encoding="utf-8"):
                         pass
-
                 except Exception as ex:
                     clear()
-
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
-
-                    print_status(
-                        state,
-                        str(ex),
-                    )
+                    redraw_all(state, selectionState, browser)
+                    print_status(state, str(ex))
+                    sys.stdout.flush()
 
                     return False, mode
 
             browser.refresh()
-
             clear()
-
-            redraw_all(
-                state,
-                selectionState,
-                browser,
-            )
-
+            redraw_all(state, selectionState, browser)
+            sys.stdout.flush()
             return False, mode
 
         elif action == "RENAME":
