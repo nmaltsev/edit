@@ -1,7 +1,7 @@
 import os
 
 class EditorState:
-    def __init__(self, use_tab:bool = False, tab_size:int = 2, view_box = (1, 1, 50, 20)):
+    def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box=(1, 1, 50, 20)):
         self.use_tab = use_tab
         self.tab_size = tab_size
         self.doc_lines = [""]
@@ -9,11 +9,14 @@ class EditorState:
         self.file_path = None
         self.modified = False
         self.cursor_offset = [0, 0]
-        self.view_box = view_box #  (x,y,w,h) immutable
+        self.view_box = view_box  # (x,y,w,h) immutable
+
+        self.open_tabs = []
+        self.active_tab_index = -1
 
     def get_tab(self):
         if self.use_tab:
-            return '\t'
+            return "\t"
         return " " * self.tab_size
 
 class SelectionState:
@@ -31,51 +34,46 @@ class SelectionState:
         b = self.end
 
         if a <= b:
-            return a,b
+            return a, b
 
-        return b,a
-    
+        return b, a
+
     def has_selection(self):
         r = self.normalize_selection()
 
         if not r:
             return False
-        a,b = r
+
+        a, b = r
         return a != b
 
     def clear_selection(self):
-        self.active=False
-        self.anchor=None
-        self.end=None
-        self.in_progress=False
+        self.active = False
+        self.anchor = None
+        self.end = None
+        self.in_progress = False
 
-
-    def begin_selection(self,row,col):
+    def begin_selection(self, row, col):
         if not self.active:
-            self.active=True
-            self.anchor=(row,col)
+            self.active = True
+            self.anchor = (row, col)
 
-        self.end=(row,col)
-        self.in_progress=True
+        self.end = (row, col)
+        self.in_progress = True
 
-    def update_selection(self, row,col):
-        self.end=(row,col)
+    def update_selection(self, row, col):
+        self.end = (row, col)
 
     def finalize_selection(self):
-        self.in_progress=False
+        self.in_progress = False
 
 class FileBrowserState:
-    def __init__(self, start_path=None, view_box=(0,0,30,20)):
-        self.current_path = os.path.abspath(
-            start_path or os.getcwd()
-        )
-
+    def __init__(self, start_path=None, view_box=(0, 0, 30, 20)):
+        self.current_path = os.path.abspath(start_path or os.getcwd())
         self.view_box = view_box
-
         self.items = []
         self.selected_index = 0
         self.scroll_offset = 0
-
         self.refresh()
 
     def refresh(self):
@@ -96,7 +94,7 @@ class FileBrowserState:
         self.items = [".."] + dirs + files
 
         if self.selected_index >= len(self.items):
-            self.selected_index = max(0, len(self.items)-1)
+            self.selected_index = max(0, len(self.items) - 1)
 
     def current_item(self):
         if not self.items:
@@ -110,7 +108,4 @@ class FileBrowserState:
         if item == "..":
             return os.path.dirname(self.current_path)
 
-        return os.path.join(
-            self.current_path,
-            item
-        )
+        return os.path.join(self.current_path, item)

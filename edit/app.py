@@ -60,6 +60,21 @@ class EditorApplication:
         self.prev_key = None
         self.modal_payload = None
 
+        tabs_height = 2
+        self.state.tab_box = (
+            browser_width + status_line_width,
+            1,
+            editor_width,
+            tabs_height,
+        )
+        self.state.tab_selected_index = 0
+        self.state.view_box = (
+            browser_width + status_line_width,
+            1 + tabs_height,
+            editor_width,
+            max(1, size.lines - 2 - tabs_height),
+        )
+
     def initialize(self):
         if len(sys.argv) > 1:
             path = sys.argv[1]
@@ -81,13 +96,12 @@ class EditorApplication:
                 self.browser.current_path = os.getcwd()
 
         clear()
-        draw_status_line(self.state, self.browser)
-
-        if self.state.file_path:
-            initial_set(self.state, self.selectionState)
-
-        draw_file_browser(self.browser)
-        print(end="")
+        redraw_all(self.state, self.selectionState, self.browser)
+        # draw_status_line(self.state, self.browser)
+        # if self.state.file_path:
+        #     initial_set(self.state, self.selectionState)
+        # draw_file_browser(self.browser)
+        # print(end="")
         sys.stdout.flush()
 
     def handle_refresh(self, key):
@@ -97,11 +111,7 @@ class EditorApplication:
         # TODO process_redraw()
         resize_layout(self.state, self.browser)
         clear()
-        redraw_all(
-            self.state,
-            self.selectionState,
-            self.browser,
-        )
+        redraw_all(self.state, self.selectionState, self.browser)
 
         sys.stdout.flush()
         self.prev_key = key
@@ -147,26 +157,21 @@ class EditorApplication:
 
         if key == "ALT+RIGHT":
             if self.mode == MODE.FILE_BROWSER:
+                self.mode = MODE.TAB_BROWSER
+            elif self.mode == MODE.TAB_BROWSER:
                 self.mode = MODE.EDIT
+            else:
+                self.mode = MODE.FILE_BROWSER
 
-                draw_status_line(
-                    self.state,
-                    self.browser,
-                )
+            clear()
+            redraw_all(
+                self.state,
+                self.selectionState,
+                self.browser,
+            )
 
-                if self.state.file_path:
-                    initial_set(
-                        self.state,
-                        self.selectionState,
-                    )
-
-                draw_file_browser(
-                    self.browser,
-                )
-
-                sys.stdout.flush()
-                self.prev_key = key
-                return True
+            self.prev_key = key
+            return True
 
             self.mode = MODE.FILE_BROWSER
 
@@ -220,6 +225,34 @@ class EditorApplication:
                 if should_break:
                     break
 
+                self.prev_key = key
+                continue
+
+            if self.mode == MODE.TAB_BROWSER:
+                from .utils.layout import activate_tab, draw_tab_panel
+
+                if key == "LEFT" and self.state.open_tabs:
+                    self.state.tab_selected_index = (
+                        self.state.tab_selected_index - 1
+                    ) % len(self.state.open_tabs)
+
+                elif key == "RIGHT" and self.state.open_tabs:
+                    self.state.tab_selected_index = (
+                        self.state.tab_selected_index + 1
+                    ) % len(self.state.open_tabs)
+
+                elif key == "ENTER":
+                    activate_tab(
+                        self.state,
+                        self.selectionState,
+                        self.state.tab_selected_index,
+                    )
+                    initial_set(self.state, self.selectionState)
+                    self.mode = MODE.EDIT
+
+                draw_tab_panel(self.state)
+                sys.stdout.flush()
+                print(end='')
                 self.prev_key = key
                 continue
 

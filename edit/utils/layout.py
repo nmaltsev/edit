@@ -1,14 +1,15 @@
 import os
-from edit.utils.kbd import get_key, clear
-from edit.utils.ui import trim_path, trim_name
-from edit.file_helpers import load_file, save_file, rm_path
+
+from edit import ENABLE_TABS
+from edit.utils.kbd import get_key, clear, move_cursor
+from edit.utils.ui import trim_path
+from edit.file_helpers import load_file
 from edit.editor_helpers import print_status, initial_set
-from edit.file_browser_helpers import draw_file_browser, process_file_browser_key
+from edit.file_browser_helpers import draw_file_browser
+
 
 def draw_status_line(state, browser):
-    # TODO initialize in a dedicated block
-    directory = getattr(browser, "current_path", os.getcwd())
-    directory = directory.replace("\\", "/")
+    directory = getattr(browser, "current_path", os.getcwd()).replace("\\", "/")
 
     if not directory.endswith("/"):
         directory += "/"
@@ -16,40 +17,71 @@ def draw_status_line(state, browser):
     file_path = state.file_path
 
     if file_path is not None:
-        file_path = state.file_path.replace("\\", "/")
-        file_path = trim_path(file_path, 50)
+        file_path = trim_path(file_path.replace("\\", "/"), 50)
 
     directory = trim_path(directory, 29)
 
-    status = f"{directory}|{file_path or ''}"
-
     print("\033[1;2H", end="")
     print("\033[2K", end="")
-    print(status, end="")
+    print(f"{directory}|{file_path or ''}", end="")
+
+
+def draw_tab_panel(state):
+    if not ENABLE_TABS:
+        return
+
+    x, y, width, _ = state.tab_box
+    move_cursor(x, y)
+    parts = []
+
+    for index, tab in enumerate(state.open_tabs):
+        name = os.path.basename(tab["path"])
+        is_active = index == state.active_tab_index
+        is_selected = index == state.tab_selected_index
+
+        if is_active:
+            name = f"[{name}]"
+        if is_selected:
+            name = f"<{name}>"
+
+        parts.append(name)
+
+    text = " ".join(parts)
+    print(text[:width].ljust(width), end="")
+
+    move_cursor(x, y + 1)
+    print("-" * width, end="")
+
 
 def redraw_all(state, selectionState, browser):
     draw_status_line(state, browser)
     draw_file_browser(browser)
+    draw_tab_panel(state)
 
     if state.file_path:
         initial_set(state, selectionState)
 
+
 def resize_layout(state, browser):
     size = os.get_terminal_size()
 
-    status_line_width = 1
     browser_width = 30
-    editor_width = max(
-        1,
-        size.columns - browser_width - status_line_width,
-    )
+    status_line_width = 1
+    tabs_height = 2 if ENABLE_TABS else 0
 
-    # Reserve one terminal row for the editor status bar.
-    editor_height = max(1, size.lines - 2)
+    editor_width = max(1, size.columns - browser_width - status_line_width)
+    editor_height = max(1, size.lines - 2 - tabs_height)
+
+    state.tab_box = (
+        browser_width + status_line_width,
+        1,
+        editor_width,
+        tabs_height,
+    )
 
     state.view_box = (
         browser_width + status_line_width,
-        1,
+        1 + tabs_height,
         editor_width,
         editor_height,
     )
@@ -58,10 +90,11 @@ def resize_layout(state, browser):
         0,
         1,
         browser_width,
-        editor_height,
+        size.lines - 1,
     )
 
     browser.refresh()
+
 
 def prompt_text(message):
     clear()
@@ -91,6 +124,7 @@ def prompt_text(message):
             value += key
             print(key, end="", flush=True)
 
+
 def find_files(root_path, pattern):
     results = []
 
@@ -99,9 +133,7 @@ def find_files(root_path, pattern):
     for root, dirs, files in os.walk(root_path):
         for filename in files:
             if pattern in filename.lower():
-                results.append(
-                    os.path.join(root, filename)
-                )
+                results.append(os.path.join(root, filename))
 
     return results
 
@@ -124,6 +156,7 @@ def show_find_results(results):
     print("Press any key...")
     get_key()
 
+
 def confirm_delete(path):
     answer = prompt_text(f"Delete '{os.path.basename(path)}'? (y/n)")
     return answer and answer.lower() == "y"
@@ -140,14 +173,66 @@ def reset_editor(state, selectionState):
 
 
 def open_editor_file(state, selectionState, path):
-    state.file_path = path
-    state.doc_lines = load_file(path)
+    existing = None
 
-    if not state.doc_lines:
-        state.doc_lines = [""]
+    for index, tab in enumerate(state.open_tabs):
+        if tab["path"] == path:
+            existing = index
+            break
 
-    state.modified = False
-    state.view_offset = 0
-    state.cursor_offset = [0, 0]
+    if existing is None:
+        state.open_tabs.append(
+            {
+                "path": path,
+                "doc_lines": load_file(path) or [""],
+                "cursor_offset": [0, 0],
+                "view_offset": 0,
+                "modified": False,
+            }
+        )
+        state.active_tab_index = len(state.open_tabs) - 1
+    else:
+        state.active_tab_index = existing
+
+    state.tab_selected_index = state.active_tab_index
+
+    tab = state.open_tabs[state.active_tab_index]
+
+    state.file_path = tab["path"]
+    state.doc_lines = tab["doc_lines"]
+    state.cursor_offset = tab["cursor_offset"]
+    state.view_offset = tab["view_offset"]
+    state.modified = tab["modified"]
+
+    selectionState.clear_selection()
+
+
+def save_active_tab_state(state):
+    if state.active_tab_index < 0:
+        return
+
+    tab = state.open_tabs[state.active_tab_index]
+    tab["doc_lines"] = state.doc_lines
+    tab["cursor_offset"] = state.cursor_offset
+    tab["view_offset"] = state.view_offset
+    tab["modified"] = state.modified
+
+
+def activate_tab(state, selectionState, index):
+    if index < 0 or index >= len(state.open_tabs):
+        return
+
+    save_active_tab_state(state)
+
+    state.active_tab_index = index
+    state.tab_selected_index = index
+
+    tab = state.open_tabs[index]
+
+    state.file_path = tab["path"]
+    state.doc_lines = tab["doc_lines"]
+    state.cursor_offset = tab["cursor_offset"]
+    state.view_offset = tab["view_offset"]
+    state.modified = tab["modified"]
 
     selectionState.clear_selection()

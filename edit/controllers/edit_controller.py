@@ -1,5 +1,12 @@
+import sys
 from ..utils.kbd import clear
-from ..utils.layout import draw_status_line, redraw_all, prompt_text, reset_editor
+from ..utils.layout import (
+    draw_status_line,
+    redraw_all,
+    prompt_text,
+    reset_editor,
+    save_active_tab_state, draw_tab_panel
+)
 from ..file_browser_helpers import draw_file_browser
 from ..editor_helpers import print_status
 from ..process_editor_keys import process_editor_keys
@@ -8,19 +15,30 @@ from ..file_helpers import save_file
 
 def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
     if key == "CTRL_Q":
-        if state.modified:
-            mode = type(mode).MODAL
+        save_active_tab_state(state)
 
-            modal_payload = {
-                "action": "CLOSE_EDITOR",
-            }
+        if state.active_tab_index >= 0:
+            state.open_tabs.pop(state.active_tab_index)
 
-            print_status(
-                state,
-                "Save before close? y/n",
-            )
+            if state.open_tabs:
+                state.active_tab_index = min(
+                    state.active_tab_index,
+                    len(state.open_tabs) - 1,
+                )
 
-            return mode, modal_payload
+                tab = state.open_tabs[state.active_tab_index]
+
+                state.file_path = tab["path"]
+                state.doc_lines = tab["doc_lines"]
+                state.cursor_offset = tab["cursor_offset"]
+                state.view_offset = tab["view_offset"]
+                state.modified = tab["modified"]
+
+                redraw_all(state, selectionState, browser)
+                # print(end='')
+                sys.stdout.flush()
+
+                return mode, modal_payload
 
         reset_editor(
             state,
@@ -28,15 +46,9 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
         )
 
         mode = type(mode).FILE_BROWSER
-
         clear()
-
-        redraw_all(
-            state,
-            selectionState,
-            browser,
-        )
-
+        redraw_all(state,selectionState,browser)
+        sys.stdout.flush()
         return mode, modal_payload
 
     if key == "ALT+S":
@@ -117,20 +129,11 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
 
         return mode, modal_payload
 
-    draw_status_line(
-        state,
-        browser,
-    )
-
-    draw_file_browser(
-        browser,
-    )
-
-    process_editor_keys(
-        key,
-        None,
-        state,
-        selectionState,
-    )
+    draw_status_line(state, browser)
+    draw_file_browser(browser)
+    draw_tab_panel(state)
+    process_editor_keys(key, None, state, selectionState)
+    save_active_tab_state(state)
+    # TODO update the tab panel
 
     return mode, modal_payload

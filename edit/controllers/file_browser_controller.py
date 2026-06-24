@@ -87,22 +87,9 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             )
 
             mode = type(mode).EDIT
-
-            draw_status_line(
-                state,
-                browser,
-            )
-
-            initial_set(
-                state,
-                selectionState,
-            )
-
-            draw_file_browser(
-                browser,
-            )
-
+            redraw_all(state, selectionState, browser)
             sys.stdout.flush()
+            print(end='')
 
             return False, mode
 
@@ -114,11 +101,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
                 except Exception as ex:
                     clear()
 
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
+                    redraw_all(state, selectionState, browser)
 
                     print_status(
                         state,
@@ -128,21 +111,13 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
                     return False, mode
 
             browser.refresh()
-
             clear()
-
-            redraw_all(
-                state,
-                selectionState,
-                browser,
-            )
+            redraw_all(state, selectionState, browser)
 
             return False, mode
 
         elif action == "CREATE_DIR":
-            directory_name = prompt_text(
-                "Enter the name of the directory and press enter"
-            )
+            directory_name = prompt_text("Enter the name of the directory and press enter")
 
             if directory_name:
                 try:
