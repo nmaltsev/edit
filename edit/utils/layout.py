@@ -210,6 +210,8 @@ def open_editor_file(state, selectionState, path):
 def save_active_tab_state(state):
     if state.active_tab_index < 0:
         return
+    if state.active_tab_index >= len(state.open_tabs):
+        return
 
     tab = state.open_tabs[state.active_tab_index]
     tab["doc_lines"] = state.doc_lines
