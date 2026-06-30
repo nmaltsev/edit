@@ -1,6 +1,6 @@
 import os
+
 from .utils.kbd import move_cursor
-# from edit.utils.ui import trim_name
 from .utils.ui import trim_name
 from .utils.text import fill
 from .file_helpers import load_file
@@ -9,7 +9,7 @@ from .file_helpers import load_file
 def draw_file_browser(browser):
     x, y, w, h = browser.view_box
 
-    visible = browser.items[browser.scroll_offset: browser.scroll_offset + h]
+    visible = browser.items[browser.scroll_offset:browser.scroll_offset + h]
 
     for row in range(h):
         move_cursor(x, y + row)
@@ -18,7 +18,7 @@ def draw_file_browser(browser):
         if idx < len(browser.items):
             name = browser.items[idx]
             prefix = ">" if idx == browser.selected_index else " "
-            text = prefix + trim_name(name, w-1)
+            text = prefix + trim_name(name, w - 1)
         else:
             text = ""
 
@@ -47,6 +47,7 @@ def process_file_browser_key(key, browser, editor_state):
     elif key == "DOWN":
         if browser.selected_index < len(browser.items) - 1:
             browser.selected_index += 1
+
             bottom = browser.scroll_offset + browser.view_box[3]
 
             if browser.selected_index >= bottom:
@@ -60,22 +61,23 @@ def process_file_browser_key(key, browser, editor_state):
             browser.selected_index = 0
             browser.scroll_offset = 0
             browser.refresh()
+
         elif os.path.isfile(path):
             return ("OPEN_FILE", path)
 
     elif key == "DELETE":
-        path = browser.current_full_path()
-        return ("DELETE", path)
+        return ("DELETE", browser.current_full_path())
 
     elif key == "CTRL_D":
-        return ("CREATE_DIR",browser.current_path)
+        return ("CREATE_DIR", browser.current_path)
 
     elif key == "CTRL_N":
         return ("CREATE_FILE", browser.current_path)
 
     elif key == "CTRL_E":
         return ("RENAME", browser.current_full_path())
+
     elif key == "CTRL_P":
-        return ("FIND_BY_FNAME",browser.current_path)
+        return ("FIND_BY_FNAME", browser.current_path)
 
     return None

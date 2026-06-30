@@ -1,16 +1,19 @@
 import sys
+
 from .utils.kbd import clear, move_cursor
 from .utils.text import fill
 from .syntax_highlighting import render_line
 
+
 def get_selected_text(state, selectionState):
+    document = state.document
     r = selectionState.normalize_selection()
 
     if not r:
         return ""
 
     (r1, c1), (r2, c2) = r
-    lines = state.doc_lines
+    lines = document.doc_lines
 
     if r1 == r2:
         return lines[r1][c1:c2]
@@ -26,13 +29,14 @@ def get_selected_text(state, selectionState):
 
 
 def delete_selection(state, selectionState):
+    document = state.document
     r = selectionState.normalize_selection()
 
     if not r:
         return None
 
     (r1, c1), (r2, c2) = r
-    doc_lines = state.doc_lines
+    doc_lines = document.doc_lines
 
     if r1 == r2:
         line = doc_lines[r1]
@@ -50,10 +54,12 @@ def delete_selection(state, selectionState):
 
 
 def insert_text(state, row, col, text):
+    document = state.document
+
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     parts = text.split("\n")
 
-    doc_lines = state.doc_lines
+    doc_lines = document.doc_lines
     line = doc_lines[row]
 
     before = line[:col]
@@ -64,6 +70,7 @@ def insert_text(state, row, col, text):
         return row, col + len(text)
 
     doc_lines[row] = before + parts[0]
+
     insert_pos = row + 1
 
     for p in parts[1:-1]:
@@ -92,6 +99,7 @@ def _unindent_line(line, state):
     if indent == "\t":
         if line.startswith("\t"):
             return line[1:]
+
         return line
 
     if line.startswith(indent):
@@ -113,6 +121,7 @@ def _unindent_line(line, state):
 
 
 def shift_selected_lines(state, selectionState, direction):
+    document = state.document
     r = selectionState.normalize_selection()
 
     if not r:
@@ -124,10 +133,13 @@ def shift_selected_lines(state, selectionState, direction):
 
     if direction > 0:
         for y in range(r1, r2 + 1):
-            state.doc_lines[y] = indent + state.doc_lines[y]
+            document.doc_lines[y] = indent + document.doc_lines[y]
     else:
         for y in range(r1, r2 + 1):
-            state.doc_lines[y] = _unindent_line(state.doc_lines[y], state)
+            document.doc_lines[y] = _unindent_line(
+                document.doc_lines[y],
+                state,
+            )
 
     return r1, c1
 
@@ -137,12 +149,17 @@ def _expand_tabs(text, tab_size):
 
 
 def build_visual_lines(state):
+    document = state.document
+
     visual = []
     width = max(1, state.view_box[2])
     tab_size = state.tab_size
 
-    for doc_y, line in enumerate(state.doc_lines):
-        expanded = _expand_tabs(line, tab_size)
+    for doc_y, line in enumerate(document.doc_lines):
+        expanded = _expand_tabs(
+            line,
+            tab_size,
+        )
 
         if expanded == "":
             visual.append((doc_y, 0, ""))
@@ -170,15 +187,23 @@ def find_visual_index(visual, doc_y, real_x):
 
 
 def move_page(state, doc_y, real_x, direction):
+    document = state.document
+
     visual = build_visual_lines(state)
 
     if not visual:
         return 0, 0, visual
 
-    current_vis_idx = find_visual_index(visual, doc_y, real_x)
+    current_vis_idx = find_visual_index(
+        visual,
+        doc_y,
+        real_x,
+    )
+
     _, current_start, _ = visual[current_vis_idx]
     cx = real_x - current_start
-    target_vis_idx = (current_vis_idx + (direction * state.view_box[3]))
+
+    target_vis_idx = current_vis_idx + (direction * state.view_box[3])
 
     if target_vis_idx < 0:
         target_vis_idx = 0
@@ -190,17 +215,26 @@ def move_page(state, doc_y, real_x, direction):
 
     target_real_x = min(
         target_start + cx,
-        len(_expand_tabs(state.doc_lines[target_dy],state.tab_size)),
+        len(
+            _expand_tabs(
+                document.doc_lines[target_dy],
+                state.tab_size,
+            )
+        ),
     )
 
     return target_dy, target_real_x, visual
 
-
 def fill_view_box(state, view_box, visual_lines, cursor=None):
-    for i in range(view_box[3]):
-        move_cursor(view_box[0], view_box[1] + i)
+    document = state.document
 
-        idx = state.view_offset + i
+    for i in range(view_box[3]):
+        move_cursor(
+            view_box[0],
+            view_box[1] + i,
+        )
+
+        idx = document.view_offset + i
 
         if idx < len(visual_lines):
             _, _, text = visual_lines[idx]
@@ -222,7 +256,7 @@ def fill_view_box(state, view_box, visual_lines, cursor=None):
                 )
 
         rendered = render_line(
-            state.file_path,
+            document.path,
             cursor_text,
         )
 
@@ -250,26 +284,57 @@ def get_status(selectionState, doc_y, real_x, ch, path):
     if selectionState.has_selection():
         (r1, c1), (r2, c2) = selectionState.normalize_selection()
         return f"({r1 + 1},{c1 + 1},{r2 + 1},{c2 + 1}) {path}"
+
     return f"({doc_y + 1}:{real_x + 1}) {repr(ch)} {path}"
 
 
 def print_status(state, message):
     y = state.view_box[1] + state.view_box[3]
 
-    move_cursor(state.view_box[0], y)
-    print(fill(message, state.view_box[2]), end="")
+    move_cursor(
+        state.view_box[0],
+        y,
+    )
+
+    print(
+        fill(
+            message,
+            state.view_box[2],
+        ),
+        end="",
+    )
+
     sys.stdout.flush()
 
 
 def initial_set(state, selectionState):
     # clear()
+    document = state.document
+
     visual = build_visual_lines(state)
-    fill_view_box(state, state.view_box, visual, cursor=state.cursor_offset,)
-    vis_idx = state.view_offset + state.cursor_offset[1]
+
+    fill_view_box(
+        state,
+        state.view_box,
+        visual,
+        cursor=document.cursor_offset,
+    )
+
+    vis_idx = document.view_offset + document.cursor_offset[1]
 
     if vis_idx >= len(visual):
         vis_idx = len(visual) - 1
 
     doc_y, start_idx, _ = visual[vis_idx]
-    real_x = start_idx + state.cursor_offset[0]
-    print_status(state, get_status(selectionState, doc_y, real_x, "", state.file_path))
+    real_x = start_idx + document.cursor_offset[0]
+
+    print_status(
+        state,
+        get_status(
+            selectionState,
+            doc_y,
+            real_x,
+            "",
+            document.path,
+        ),
+    )

@@ -1,11 +1,13 @@
 import sys
+
 from ..utils.kbd import clear
 from ..utils.layout import (
     draw_status_line,
     redraw_all,
     prompt_text,
     reset_editor,
-    save_active_tab_state, draw_tab_panel
+    save_active_tab_state,
+    draw_tab_panel,
 )
 from ..file_browser_helpers import draw_file_browser
 from ..editor_helpers import print_status
@@ -14,6 +16,8 @@ from ..file_helpers import save_file
 
 
 def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
+    document = state.document
+
     if key == "CTRL_Q":
         save_active_tab_state(state)
 
@@ -26,16 +30,14 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
                     len(state.open_tabs) - 1,
                 )
 
-                tab = state.open_tabs[state.active_tab_index]
+                state.document = state.open_tabs[state.active_tab_index]
 
-                state.file_path = tab["path"]
-                state.doc_lines = tab["doc_lines"]
-                state.cursor_offset = tab["cursor_offset"]
-                state.view_offset = tab["view_offset"]
-                state.modified = tab["modified"]
+                redraw_all(
+                    state,
+                    selectionState,
+                    browser,
+                )
 
-                redraw_all(state, selectionState, browser)
-                # print(end='')
                 sys.stdout.flush()
 
                 return mode, modal_payload
@@ -46,9 +48,17 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
         )
 
         mode = type(mode).FILE_BROWSER
+
         clear()
-        redraw_all(state,selectionState,browser)
+
+        redraw_all(
+            state,
+            selectionState,
+            browser,
+        )
+
         sys.stdout.flush()
+
         return mode, modal_payload
 
     if key == "ALT+S":
@@ -60,11 +70,11 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
             try:
                 save_file(
                     target,
-                    state.doc_lines,
+                    document.doc_lines,
                 )
 
-                state.file_path = target
-                state.modified = False
+                document.path = target
+                document.modified = False
 
             except Exception as ex:
                 clear()
@@ -94,8 +104,8 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
 
     if key == "CTRL_S":
         if (
-            not state.file_path
-            or state.file_path == "Untitled"
+            not document.path
+            or document.path == "Untitled"
         ):
             target = prompt_text(
                 "Save as file name"
@@ -112,14 +122,14 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
 
                 return mode, modal_payload
 
-            state.file_path = target
+            document.path = target
 
         save_file(
-            state.file_path,
-            state.doc_lines,
+            document.path,
+            document.doc_lines,
         )
 
-        state.modified = False
+        document.modified = False
 
         redraw_all(
             state,
@@ -129,11 +139,30 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
 
         return mode, modal_payload
 
-    draw_status_line(state, browser)
-    draw_file_browser(browser)
-    draw_tab_panel(state)
-    process_editor_keys(key, None, state, selectionState)
-    save_active_tab_state(state)
+    draw_status_line(
+        state,
+        browser,
+    )
+
+    draw_file_browser(
+        browser,
+    )
+
+    draw_tab_panel(
+        state,
+    )
+
+    process_editor_keys(
+        key,
+        None,
+        state,
+        selectionState,
+    )
+
+    save_active_tab_state(
+        state,
+    )
+
     # TODO update the tab panel
 
     return mode, modal_payload

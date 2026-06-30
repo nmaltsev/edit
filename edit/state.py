@@ -1,15 +1,22 @@
 import os
 
+
+class DocumentState:
+    def __init__(self, path=None, doc_lines=None):
+        self.path = path
+        self.doc_lines = doc_lines or [""]
+        self.cursor_offset = [0, 0]
+        self.view_offset = 0
+        self.modified = False
+
+
 class EditorState:
     def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box=(1, 1, 50, 20)):
         self.use_tab = use_tab
         self.tab_size = tab_size
-        self.doc_lines = [""]
-        self.view_offset = 0
-        self.file_path = None
-        self.modified = False
-        self.cursor_offset = [0, 0]
         self.view_box = view_box  # (x,y,w,h) immutable
+
+        self.document = DocumentState()
 
         self.open_tabs = []
         self.active_tab_index = -1
@@ -18,6 +25,7 @@ class EditorState:
         if self.use_tab:
             return "\t"
         return " " * self.tab_size
+
 
 class SelectionState:
     def __init__(self):
@@ -66,6 +74,7 @@ class SelectionState:
 
     def finalize_selection(self):
         self.in_progress = False
+
 
 class FileBrowserState:
     def __init__(self, start_path=None, view_box=(0, 0, 30, 20)):

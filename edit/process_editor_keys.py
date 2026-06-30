@@ -1,6 +1,19 @@
 from dataclasses import dataclass
-from .editor_helpers import get_selected_text, delete_selection, insert_text, replace_selection, shift_selected_lines, build_visual_lines, move_page, fill_view_box, get_status, print_status
+
+from .editor_helpers import (
+    get_selected_text,
+    delete_selection,
+    insert_text,
+    replace_selection,
+    shift_selected_lines,
+    build_visual_lines,
+    move_page,
+    fill_view_box,
+    get_status,
+    print_status,
+)
 from .clipboard import copy_to_clipboard, paste_from_clipboard
+
 
 @dataclass
 class EditorResult:
@@ -11,7 +24,8 @@ class EditorResult:
 
 
 def _display_line(state, doc_y):
-    return state.doc_lines[doc_y].expandtabs(state.tab_size)
+    return state.document.doc_lines[doc_y].expandtabs(state.tab_size)
+
 
 def _display_to_doc_col(line, display_col, tab_size):
     """
@@ -35,6 +49,7 @@ def _display_to_doc_col(line, display_col, tab_size):
 
     return len(line)
 
+
 def _doc_to_display_col(line, doc_col, tab_size):
     """
     Convert document column to visual column.
@@ -49,25 +64,37 @@ def _doc_to_display_col(line, doc_col, tab_size):
 
     return visual
 
+
 def process_editor_keys(key, prev_key, state, selectionState):
+    document = state.document
+
     visual = build_visual_lines(state)
 
     if not visual:
         visual = [(0, 0, "")]
 
-    cx, cy = state.cursor_offset
-    vis_idx = state.view_offset + cy
+    cx, cy = document.cursor_offset
+    vis_idx = document.view_offset + cy
 
     if vis_idx >= len(visual):
         vis_idx = len(visual) - 1
 
     doc_y, start_idx, segment = visual[vis_idx]
-    line = state.doc_lines[doc_y]
+    line = document.doc_lines[doc_y]
     display_x = start_idx + cx
     doc_x = _display_to_doc_col(line, display_x, state.tab_size)
     real_x = doc_x
 
-    shift_move = key in ("SHIFT+LEFT", "SHIFT+RIGHT", "SHIFT+UP", "SHIFT+DOWN", "SHIFT+PAGE_DOWN", "SHIFT+PAGE_UP", "SHIFT+HOME", "SHIFT+END")
+    shift_move = key in (
+        "SHIFT+LEFT",
+        "SHIFT+RIGHT",
+        "SHIFT+UP",
+        "SHIFT+DOWN",
+        "SHIFT+PAGE_DOWN",
+        "SHIFT+PAGE_UP",
+        "SHIFT+HOME",
+        "SHIFT+END",
+    )
 
     # --------------------------------------------------
     # Selection begin/end
@@ -86,11 +113,12 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # Select All
     # --------------------------------------------------
     if key == "CTRL_A":
-        if not state.doc_lines:
-            state.doc_lines = [""]
+        if not document.doc_lines:
+            document.doc_lines = [""]
 
-        last_row = len(state.doc_lines) - 1
-        last_col = len(state.doc_lines[last_row])
+        last_row = len(document.doc_lines) - 1
+        last_col = len(document.doc_lines[last_row])
+
         selectionState.clear_selection()
         selectionState.begin_selection(0, 0)
         selectionState.update_selection(last_row, last_col)
@@ -99,12 +127,13 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     # Shift selected block
     # --------------------------------------------------
-    elif (selectionState.has_selection() and key in ("TAB", "[Z")):
+    elif selectionState.has_selection() and key in ("TAB", "[Z"):
         if key == "TAB":
             shift_selected_lines(state, selectionState, 1)
         else:
             shift_selected_lines(state, selectionState, -1)
-        state.modified = True
+
+        document.modified = True
 
     # --------------------------------------------------
     # Selection operations
@@ -114,7 +143,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
         if key == "CTRL_C":
             copy_to_clipboard(get_selected_text(state, selectionState))
-
             selection_consumed = True
 
         elif key == "CTRL_X":
@@ -123,7 +151,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
             if pos:
                 doc_y, real_x = pos
-                state.modified = True
+                document.modified = True
 
             selection_consumed = True
 
@@ -132,16 +160,17 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
             if pos:
                 doc_y, real_x = pos
-                state.modified = True
+                document.modified = True
 
             selection_consumed = True
+
         elif key == "CTRL_V":
             text = paste_from_clipboard()
             pos = replace_selection(state, selectionState, text)
 
             if pos:
                 doc_y, real_x = pos
-                state.modified = True
+                document.modified = True
 
             selection_consumed = True
 
@@ -155,7 +184,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
 
             if pos:
                 doc_y, real_x = pos
-                state.modified = True
+                document.modified = True
 
             selection_consumed = True
 
@@ -168,111 +197,152 @@ def process_editor_keys(key, prev_key, state, selectionState):
             if not visual:
                 visual = [(0, 0, "")]
 
-            display_x = _doc_to_display_col(state.doc_lines[doc_y], real_x, state.tab_size)
+            display_x = _doc_to_display_col(
+                document.doc_lines[doc_y],
+                real_x,
+                state.tab_size,
+            )
+
             new_vis_idx = 0
 
             for i, (dy, start, seg) in enumerate(visual):
-                if (dy == doc_y and start <= display_x <= start + len(seg)):
+                if dy == doc_y and start <= display_x <= start + len(seg):
                     new_vis_idx = i
                     break
 
             _, start, _ = visual[new_vis_idx]
 
             cx = display_x - start
-            cy = new_vis_idx - state.view_offset
+            cy = new_vis_idx - document.view_offset
 
             if cy < 0:
-                state.view_offset = new_vis_idx
+                document.view_offset = new_vis_idx
                 cy = 0
 
             elif cy >= state.view_box[3]:
-                state.view_offset = (new_vis_idx - state.view_box[3] + 1)
+                document.view_offset = new_vis_idx - state.view_box[3] + 1
                 cy = state.view_box[3] - 1
 
-            state.cursor_offset = [cx, cy]
+            document.cursor_offset = [cx, cy]
 
-            fill_view_box(state, state.view_box, visual, cursor=(cx, cy))
+            fill_view_box(
+                state,
+                state.view_box,
+                visual,
+                cursor=(cx, cy),
+            )
 
             ch = ""
 
-            if (doc_y < len(state.doc_lines) and real_x < len(state.doc_lines[doc_y])):
-                ch = state.doc_lines[doc_y][real_x]
+            if (
+                doc_y < len(document.doc_lines)
+                and real_x < len(document.doc_lines[doc_y])
+            ):
+                ch = document.doc_lines[doc_y][real_x]
 
-            print_status(state, get_status(selectionState, doc_y, real_x, ch, state.file_path + ("*" if state.modified else "")))
+            print_status(
+                state,
+                get_status(
+                    selectionState,
+                    doc_y,
+                    real_x,
+                    ch,
+                    document.path + ("*" if document.modified else "") if document.path else "",
+                ),
+            )
 
-            return EditorResult(doc_y=doc_y, real_x=real_x, visual=visual)
+            return EditorResult(
+                doc_y=doc_y,
+                real_x=real_x,
+                visual=visual,
+            )
 
     # --------------------------------------------------
     # Paste
     # --------------------------------------------------
     if key == "CTRL_V":
         text = paste_from_clipboard()
+
         if selectionState.has_selection():
             pos = replace_selection(state, selectionState, text)
 
             if pos:
                 doc_y, real_x = pos
-                state.modified = True
+                document.modified = True
         else:
-            doc_y, real_x = insert_text(state, doc_y, real_x, text)
-            state.modified = True
+            doc_y, real_x = insert_text(
+                state,
+                doc_y,
+                real_x,
+                text,
+            )
+            document.modified = True
 
     # --------------------------------------------------
     # Insert tab
     # --------------------------------------------------
     elif key == "TAB":
         if not selectionState.has_selection():
-            doc_y, real_x = insert_text(state, doc_y, real_x, state.get_tab())
-            state.modified = True
+            doc_y, real_x = insert_text(
+                state,
+                doc_y,
+                real_x,
+                state.get_tab(),
+            )
+            document.modified = True
 
     # --------------------------------------------------
     # Printable chars
     # --------------------------------------------------
     elif len(key) == 1:
-        line = state.doc_lines[doc_y]
-        state.doc_lines[doc_y] = (line[:real_x] + key + line[real_x:])
+        line = document.doc_lines[doc_y]
+        document.doc_lines[doc_y] = line[:real_x] + key + line[real_x:]
         real_x += 1
-        state.modified = True
+        document.modified = True
 
     # --------------------------------------------------
     # Enter
     # --------------------------------------------------
     elif key == "ENTER":
-        line = state.doc_lines[doc_y]
+        line = document.doc_lines[doc_y]
         new_line = line[real_x:]
-        state.doc_lines[doc_y] = line[:real_x]
-        state.doc_lines.insert(doc_y + 1, new_line,)
+        document.doc_lines[doc_y] = line[:real_x]
+        document.doc_lines.insert(doc_y + 1, new_line)
         doc_y += 1
         real_x = 0
-        state.modified = True
+        document.modified = True
 
     # --------------------------------------------------
     # Backspace
     # --------------------------------------------------
     elif key == "BACKSPACE":
-        line = state.doc_lines[doc_y]
+        line = document.doc_lines[doc_y]
+
         if real_x > 0:
-            state.doc_lines[doc_y] = (line[:real_x - 1] + line[real_x:])
+            document.doc_lines[doc_y] = line[:real_x - 1] + line[real_x:]
             real_x -= 1
         elif doc_y > 0:
-            prev_line = state.doc_lines[doc_y - 1]
+            prev_line = document.doc_lines[doc_y - 1]
             real_x = len(prev_line)
-            state.doc_lines[doc_y - 1] = (prev_line + line)
-            state.doc_lines.pop(doc_y)
+            document.doc_lines[doc_y - 1] = prev_line + line
+            document.doc_lines.pop(doc_y)
             doc_y -= 1
-        state.modified = True
+
+        document.modified = True
 
     # --------------------------------------------------
     # Delete
     # --------------------------------------------------
     elif key == "DELETE":
-        line = state.doc_lines[doc_y]
+        line = document.doc_lines[doc_y]
+
         if real_x < len(line):
-            state.doc_lines[doc_y] = (line[:real_x] + line[real_x + 1:])
-        elif doc_y < len(state.doc_lines) - 1:
-            state.doc_lines[doc_y] += (state.doc_lines[doc_y + 1])
-            state.doc_lines.pop(doc_y + 1)
-        state.modified = True
+            document.doc_lines[doc_y] = line[:real_x] + line[real_x + 1:]
+        elif doc_y < len(document.doc_lines) - 1:
+            document.doc_lines[doc_y] += document.doc_lines[doc_y + 1]
+            document.doc_lines.pop(doc_y + 1)
+
+        document.modified = True
 
     # --------------------------------------------------
     # Navigation
@@ -282,39 +352,81 @@ def process_editor_keys(key, prev_key, state, selectionState):
             real_x -= 1
         elif doc_y > 0:
             doc_y -= 1
-            real_x = len(state.doc_lines[doc_y])
+            real_x = len(document.doc_lines[doc_y])
 
     elif key in ("RIGHT", "SHIFT+RIGHT"):
-        if real_x < len(state.doc_lines[doc_y]):
+        if real_x < len(document.doc_lines[doc_y]):
             real_x += 1
-        elif doc_y < len(state.doc_lines) - 1:
+        elif doc_y < len(document.doc_lines) - 1:
             doc_y += 1
             real_x = 0
 
     elif key in ("UP", "SHIFT+UP"):
         if doc_y > 0:
-            target_display_x = _doc_to_display_col(state.doc_lines[doc_y], real_x, state.tab_size)
-            doc_y -= 1
-            real_x = _display_to_doc_col(state.doc_lines[doc_y], target_display_x, state.tab_size)
+            target_display_x = _doc_to_display_col(
+                document.doc_lines[doc_y],
+                real_x,
+                state.tab_size,
+            )
 
-    elif key in ("DOWN","SHIFT+DOWN"):
-        if doc_y < len(state.doc_lines) - 1:
-            target_display_x = _doc_to_display_col(state.doc_lines[doc_y], real_x, state.tab_size)
+            doc_y -= 1
+
+            real_x = _display_to_doc_col(
+                document.doc_lines[doc_y],
+                target_display_x,
+                state.tab_size,
+            )
+
+    elif key in ("DOWN", "SHIFT+DOWN"):
+        if doc_y < len(document.doc_lines) - 1:
+            target_display_x = _doc_to_display_col(
+                document.doc_lines[doc_y],
+                real_x,
+                state.tab_size,
+            )
+
             doc_y += 1
-            real_x = _display_to_doc_col(state.doc_lines[doc_y], target_display_x, state.tab_size)
+
+            real_x = _display_to_doc_col(
+                document.doc_lines[doc_y],
+                target_display_x,
+                state.tab_size,
+            )
 
     elif key in ("HOME", "SHIFT+HOME"):
         real_x = 0
 
     elif key in ("END", "SHIFT+END"):
-        real_x = len(state.doc_lines[doc_y])
+        real_x = len(document.doc_lines[doc_y])
 
-    elif key in ("PAGEDOWN", "PAGE_DOWN", "PAGE DOWN", "SHIFT+PAGEDOWN", "SHIFT+PAGE_DOWN", "SHIFT+PAGE DOWN"):
-        doc_y, real_x, visual = move_page(state, doc_y, real_x,1)
+    elif key in (
+        "PAGEDOWN",
+        "PAGE_DOWN",
+        "PAGE DOWN",
+        "SHIFT+PAGEDOWN",
+        "SHIFT+PAGE_DOWN",
+        "SHIFT+PAGE DOWN",
+    ):
+        doc_y, real_x, visual = move_page(
+            state,
+            doc_y,
+            real_x,
+            1,
+        )
 
-    elif key in ("PAGEUP", "PAGE_UP", "PAGE UP", "SHIFT+PAGEUP", "SHIFT+PAGE_UP", "SHIFT+PAGE UP"):
-        doc_y, real_x, visual = move_page(state, doc_y,real_x,-1)
-
+    elif key in (
+        "PAGEUP",
+        "PAGE_UP",
+        "PAGE UP",
+        "SHIFT+PAGEUP",
+        "SHIFT+PAGE_UP",
+    ):
+        doc_y, real_x, visual = move_page(
+            state,
+            doc_y,
+            real_x,
+            -1,
+        )
     # --------------------------------------------------
     # Selection update
     # --------------------------------------------------
@@ -325,41 +437,59 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # Rebuild screen
     # --------------------------------------------------
     visual = build_visual_lines(state)
-    display_x = _doc_to_display_col(state.doc_lines[doc_y], real_x, state.tab_size)
+
+    display_x = _doc_to_display_col(
+        document.doc_lines[doc_y],
+        real_x,
+        state.tab_size,
+    )
+
     new_vis_idx = 0
+
     for i, (dy, start, seg) in enumerate(visual):
-        if (dy == doc_y and start <= display_x <= start + len(seg)):
+        if dy == doc_y and start <= display_x <= start + len(seg):
             new_vis_idx = i
             break
 
     _, start, _ = visual[new_vis_idx]
+
     cx = display_x - start
-    cy = new_vis_idx - state.view_offset
+    cy = new_vis_idx - document.view_offset
 
     if cy < 0:
-        state.view_offset = new_vis_idx
+        document.view_offset = new_vis_idx
         cy = 0
 
     elif cy >= state.view_box[3]:
-        state.view_offset = (new_vis_idx - state.view_box[3] + 1)
+        document.view_offset = new_vis_idx - state.view_box[3] + 1
         cy = state.view_box[3] - 1
 
-    state.cursor_offset = [cx, cy]
-    fill_view_box(state, state.view_box, visual, cursor=(cx, cy))
+    document.cursor_offset = [cx, cy]
+
+    fill_view_box(
+        state,
+        state.view_box,
+        visual,
+        cursor=(cx, cy),
+    )
+
     ch = ""
 
-    if (doc_y < len(state.doc_lines) and real_x < len(state.doc_lines[doc_y])):
-        ch = state.doc_lines[doc_y][real_x]
+    if (
+        doc_y < len(document.doc_lines)
+        and real_x < len(document.doc_lines[doc_y])
+    ):
+        ch = document.doc_lines[doc_y][real_x]
 
     print_status(
-        state, 
+        state,
         get_status(
-            selectionState, 
-            doc_y, 
-            real_x, 
-            ch, 
-            (state.file_path + ("*" if state.modified else "") if state.file_path is not None else "")
-        )
+            selectionState,
+            doc_y,
+            real_x,
+            ch,
+            document.path + ("*" if document.modified else "") if document.path is not None else "",
+        ),
     )
 
     return EditorResult(

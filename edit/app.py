@@ -108,7 +108,8 @@ class EditorApplication:
         if self.state.active_tab_index < len(self.state.open_tabs):
             tab = self.state.open_tabs[self.state.active_tab_index]
             if tab is not None:
-                self.state.doc_lines = tab["doc_lines"] = load_file(tab["path"]) or [""]
+                tab.doc_lines = load_file(tab.path) or [""]
+                self.state.document = tab
 
         resize_layout(self.state, self.browser)
         clear()
@@ -124,9 +125,9 @@ class EditorApplication:
             self.mode == MODE.EDIT
             or self.mode == MODE.LOG
         ):
-            self.mode = (MODE.EDIT if self.mode == MODE.LOG else MODE.LOG)
+            self.mode = MODE.EDIT if self.mode == MODE.LOG else MODE.LOG
 
-            #  TODO process_
+            # TODO process_
             clear()
 
             if self.mode == MODE.EDIT:
@@ -223,18 +224,19 @@ class EditorApplication:
                     self.state.tab_selected_index = (
                         self.state.tab_selected_index + 1
                     ) % len(self.state.open_tabs)
+
                 elif key == "CTRL_O":
                     # to change the current directory
                     if self.state.tab_selected_index < len(self.state.open_tabs):
-                        # raise Exception('stop')
                         tab = self.state.open_tabs[self.state.tab_selected_index]
+
                         if tab is not None:
-                            next_path = os.path.dirname(tab["path"])
+                            next_path = os.path.dirname(tab.path)
                             self.mode = MODE.FILE_BROWSER
                             self.browser.current_path = next_path
                             self.browser.refresh()
                             draw_file_browser(self.browser)
-                            
+
                 elif key == "ENTER":
                     activate_tab(
                         self.state,
@@ -246,7 +248,7 @@ class EditorApplication:
 
                 draw_tab_panel(self.state)
                 sys.stdout.flush()
-                print(end='')
+                print(end="")
                 self.prev_key = key
                 continue
 

@@ -6,6 +6,7 @@ from edit.utils.ui import trim_path
 from edit.file_helpers import load_file
 from edit.editor_helpers import print_status, initial_set
 from edit.file_browser_helpers import draw_file_browser
+from edit.state import DocumentState
 
 
 def draw_status_line(state, browser):
@@ -14,7 +15,7 @@ def draw_status_line(state, browser):
     if not directory.endswith("/"):
         directory += "/"
 
-    file_path = state.file_path
+    file_path = state.document.path
 
     if file_path is not None:
         file_path = trim_path(file_path.replace("\\", "/"), 50)
@@ -32,21 +33,24 @@ def draw_tab_panel(state):
 
     x, y, width, _ = state.tab_box
     move_cursor(x, y)
+
     parts = []
 
-    for index, tab in enumerate(state.open_tabs):
-        name = os.path.basename(tab["path"])
+    for index, document in enumerate(state.open_tabs):
+        name = os.path.basename(document.path or "Untitled")
         is_active = index == state.active_tab_index
         is_selected = index == state.tab_selected_index
 
         if is_active:
             name = f"[{name}]"
+
         if is_selected:
             name = f"<{name}>"
 
         parts.append(name)
 
     text = " ".join(parts)
+
     print(text[:width].ljust(width), end="")
 
     move_cursor(x, y + 1)
@@ -58,7 +62,7 @@ def redraw_all(state, selectionState, browser):
     draw_file_browser(browser)
     draw_tab_panel(state)
 
-    if state.file_path:
+    if state.document.path:
         initial_set(state, selectionState)
 
 
@@ -118,6 +122,7 @@ def prompt_text(message):
             if value:
                 value = value[:-1]
                 print("\b \b", end="", flush=True)
+
             continue
 
         if len(key) == 1:
@@ -163,11 +168,7 @@ def confirm_delete(path):
 
 
 def reset_editor(state, selectionState):
-    state.doc_lines = [""]
-    state.file_path = None
-    state.modified = False
-    state.view_offset = 0
-    state.cursor_offset = [0, 0]
+    state.document = DocumentState()
 
     selectionState.clear_selection()
 
@@ -175,49 +176,40 @@ def reset_editor(state, selectionState):
 def open_editor_file(state, selectionState, path):
     existing = None
 
-    for index, tab in enumerate(state.open_tabs):
-        if tab["path"] == path:
+    for index, document in enumerate(state.open_tabs):
+        if document.path == path:
             existing = index
             break
 
     if existing is None:
-        state.open_tabs.append(
-            {
-                "path": path,
-                "doc_lines": load_file(path) or [""],
-                "cursor_offset": [0, 0],
-                "view_offset": 0,
-                "modified": False,
-            }
+        document = DocumentState(
+            path=path,
+            doc_lines=load_file(path) or [""],
         )
+
+        state.open_tabs.append(document)
         state.active_tab_index = len(state.open_tabs) - 1
     else:
         state.active_tab_index = existing
 
     state.tab_selected_index = state.active_tab_index
-
-    tab = state.open_tabs[state.active_tab_index]
-
-    state.file_path = tab["path"]
-    state.doc_lines = tab["doc_lines"]
-    state.cursor_offset = tab["cursor_offset"]
-    state.view_offset = tab["view_offset"]
-    state.modified = tab["modified"]
+    state.document = state.open_tabs[state.active_tab_index]
 
     selectionState.clear_selection()
 
 
 def save_active_tab_state(state):
+    """
+    No copying is required because EditorState.document references the
+    active DocumentState instance stored in open_tabs.
+    """
     if state.active_tab_index < 0:
         return
+
     if state.active_tab_index >= len(state.open_tabs):
         return
 
-    tab = state.open_tabs[state.active_tab_index]
-    tab["doc_lines"] = state.doc_lines
-    tab["cursor_offset"] = state.cursor_offset
-    tab["view_offset"] = state.view_offset
-    tab["modified"] = state.modified
+    state.open_tabs[state.active_tab_index] = state.document
 
 
 def activate_tab(state, selectionState, index):
@@ -228,13 +220,6 @@ def activate_tab(state, selectionState, index):
 
     state.active_tab_index = index
     state.tab_selected_index = index
-
-    tab = state.open_tabs[index]
-
-    state.file_path = tab["path"]
-    state.doc_lines = tab["doc_lines"]
-    state.cursor_offset = tab["cursor_offset"]
-    state.view_offset = tab["view_offset"]
-    state.modified = tab["modified"]
+    state.document = state.open_tabs[index]
 
     selectionState.clear_selection()
