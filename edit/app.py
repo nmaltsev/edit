@@ -4,8 +4,9 @@ from enum import Enum
 
 from .utils.kbd import get_key, clear
 from .utils.layout import draw_status_line, redraw_all, resize_layout
-from .state import EditorState, SelectionState, FileBrowserState
+from .state import EditorState, SelectionState, FileBrowserState, DocumentState
 from .editor_helpers import initial_set, print_status
+from .utils.layout import reset_editor
 from .file_helpers import load_file
 from .file_browser_helpers import draw_file_browser
 from .process_editor_keys import process_editor_keys
@@ -78,23 +79,31 @@ class EditorApplication:
 
     def initialize(self):
         if len(sys.argv) > 1:
-            path = sys.argv[1]
+            path = os.path.expanduser(sys.argv[1])
 
-            try:
-                if os.stat(path)[0] & 0x4000:
-                    # If the path is a directory
-                    self.browser.current_path = path
-                    self.browser.refresh()
-                else:
-                    open_editor_file(
-                        self.state,
-                        self.selectionState,
-                        path,
-                    )
-                    self.mode = MODE.EDIT
+            if os.path.isdir(path):
+                # Open directory in the file browser.
+                self.browser.current_path = path
+                self.browser.refresh()
 
-            except FileNotFoundError:
-                self.browser.current_path = os.getcwd()
+            elif os.path.exists(path):
+                # Existing file.
+                open_editor_file(self.state, self.selectionState, path)
+                self.mode = MODE.EDIT
+
+            else:
+                # New file:
+                if not os.path.isabs(path):
+                    path = os.path.abspath(path)
+
+                document = DocumentState(path=path)
+                self.state.open_tabs.append(document)
+                self.state.active_tab_index = len(self.state.open_tabs) - 1
+                self.state.tab_selected_index = self.state.active_tab_index
+                self.state.document = document
+
+                self.selectionState.clear_selection()
+                self.mode = MODE.EDIT
 
         clear()
         redraw_all(self.state, self.selectionState, self.browser)

@@ -1,4 +1,4 @@
-import sys
+import sys, os
 
 from ..utils.kbd import clear
 from ..utils.layout import (
@@ -103,66 +103,32 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
         return mode, modal_payload
 
     if key == "CTRL_S":
-        if (
-            not document.path
-            or document.path == "Untitled"
-        ):
-            target = prompt_text(
-                "Save as file name"
-            )
+        if (not document.path or document.path == "Untitled"):
+            target = prompt_text("Save as file name")
 
             if not target:
                 clear()
-
-                redraw_all(
-                    state,
-                    selectionState,
-                    browser,
-                )
+                redraw_all(state, selectionState, browser)
 
                 return mode, modal_payload
 
-            document.path = target
+            target = os.path.expanduser(target)
 
-        save_file(
-            document.path,
-            document.doc_lines,
-        )
+            if not os.path.isabs(target):
+                target = os.path.join(browser.current_path, target)
+            document.path = os.path.abspath(target)
 
+        save_file(document.path, document.doc_lines)
         document.modified = False
-
-        redraw_all(
-            state,
-            selectionState,
-            browser,
-        )
+        redraw_all(state, selectionState, browser)
 
         return mode, modal_payload
 
-    draw_status_line(
-        state,
-        browser,
-    )
+    draw_status_line(state, browser)
+    draw_file_browser(browser)
+    draw_tab_panel(state)
+    process_editor_keys(key, None, state, selectionState)
 
-    draw_file_browser(
-        browser,
-    )
-
-    draw_tab_panel(
-        state,
-    )
-
-    process_editor_keys(
-        key,
-        None,
-        state,
-        selectionState,
-    )
-
-    save_active_tab_state(
-        state,
-    )
-
-    # TODO update the tab panel
-
+    save_active_tab_state(state)
+    
     return mode, modal_payload

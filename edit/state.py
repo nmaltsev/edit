@@ -1,6 +1,5 @@
 import os
 
-
 class DocumentState:
     def __init__(self, path=None, doc_lines=None):
         self.path = path
@@ -8,7 +7,6 @@ class DocumentState:
         self.cursor_offset = [0, 0]
         self.view_offset = 0
         self.modified = False
-
 
 class EditorState:
     def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box=(1, 1, 50, 20)):

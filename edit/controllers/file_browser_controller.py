@@ -31,60 +31,35 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
         return False, mode
 
     if key == "ALT+N":
-        reset_editor(
-            state,
-            selectionState,
-        )
+        from ..state import DocumentState
 
-        state.file_path = "Untitled"
+        document = DocumentState(path="Untitled")
+        state.open_tabs.append(document)
+        state.active_tab_index = len(state.open_tabs) - 1
+        state.tab_selected_index = state.active_tab_index
+        state.document = document
+
+        selectionState.clear_selection()
         mode = type(mode).EDIT
-
         clear()
 
-        draw_status_line(
-            state,
-            browser,
-        )
-
-        initial_set(
-            state,
-            selectionState,
-        )
-
-        draw_file_browser(
-            browser,
-        )
-
+        draw_status_line(state, browser)
+        initial_set(state, selectionState)
+        draw_file_browser(browser)
         sys.stdout.flush()
 
         return False, mode
 
-    result = process_file_browser_key(
-        key,
-        browser,
-        state,
-    )
-
-    draw_status_line(
-        state,
-        browser,
-    )
-
-    draw_file_browser(
-        browser,
-    )
-
+    result = process_file_browser_key(key, browser, state)
+    draw_status_line(state, browser)
+    draw_file_browser(browser)
     sys.stdout.flush()
 
     if result:
         action, path = result
 
         if action == "OPEN_FILE":
-            open_editor_file(
-                state,
-                selectionState,
-                path,
-            )
+            open_editor_file(state, selectionState, path)
 
             mode = type(mode).EDIT
             redraw_all(state, selectionState, browser)
