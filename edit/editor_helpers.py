@@ -6,6 +6,7 @@ from .syntax_highlighting import render_line
 
 
 def get_selected_text(state, selectionState):
+    # TODO implement document.get_selected_text(selectionState)
     document = state.document
     r = selectionState.normalize_selection()
 
@@ -291,24 +292,12 @@ def get_status(selectionState, doc_y, real_x, ch, path):
 def print_status(state, message):
     y = state.view_box[1] + state.view_box[3]
 
-    move_cursor(
-        state.view_box[0],
-        y,
-    )
-
-    print(
-        fill(
-            message,
-            state.view_box[2],
-        ),
-        end="",
-    )
-
+    move_cursor(state.view_box[0], y)
+    print(fill(message, state.view_box[2]), end="")
     sys.stdout.flush()
 
 
 def initial_set(state, selectionState):
-    # clear()
     document = state.document
 
     visual = build_visual_lines(state)

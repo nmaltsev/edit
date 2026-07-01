@@ -76,26 +76,9 @@ def resize_layout(state, browser):
     editor_width = max(1, size.columns - browser_width - status_line_width)
     editor_height = max(1, size.lines - 2 - tabs_height)
 
-    state.tab_box = (
-        browser_width + status_line_width,
-        1,
-        editor_width,
-        tabs_height,
-    )
-
-    state.view_box = (
-        browser_width + status_line_width,
-        1 + tabs_height,
-        editor_width,
-        editor_height,
-    )
-
-    browser.view_box = (
-        0,
-        1,
-        browser_width,
-        size.lines - 1,
-    )
+    state.tab_box = (browser_width + status_line_width, 1, editor_width, tabs_height)
+    state.view_box = (browser_width + status_line_width, 1 + tabs_height, editor_width, editor_height)
+    browser.view_box = (0, 1, browser_width, size.lines - 1)
 
     browser.refresh()
 
@@ -169,17 +152,18 @@ def confirm_delete(path):
 
 def reset_editor(state, selectionState):
     state.document = DocumentState()
-
     selectionState.clear_selection()
 
 
 def open_editor_file(state, selectionState, path):
-    existing = None
+    # TODO use findExistingTabByPath
+    existing = state.findExistingTabByPath(path)
+    # existing = None
 
-    for index, document in enumerate(state.open_tabs):
-        if document.path == path:
-            existing = index
-            break
+    # for index, document in enumerate(state.open_tabs):
+    #     if document.path == path:
+    #         existing = index
+    #         break
 
     if existing is None:
         document = DocumentState(
@@ -197,29 +181,27 @@ def open_editor_file(state, selectionState, path):
 
     selectionState.clear_selection()
 
+# DEPRECATED
+# def save_active_tab_state(state):
+#     """
+#     No copying is required because EditorState.document references the
+#     active DocumentState instance stored in open_tabs.
+#     """
+#     if state.active_tab_index < 0:
+#         return
 
-def save_active_tab_state(state):
-    """
-    No copying is required because EditorState.document references the
-    active DocumentState instance stored in open_tabs.
-    """
-    if state.active_tab_index < 0:
-        return
+#     if state.active_tab_index >= len(state.open_tabs):
+#         return
 
-    if state.active_tab_index >= len(state.open_tabs):
-        return
-
-    state.open_tabs[state.active_tab_index] = state.document
+#     state.open_tabs[state.active_tab_index] = state.document
 
 
 def activate_tab(state, selectionState, index):
     if index < 0 or index >= len(state.open_tabs):
         return
 
-    save_active_tab_state(state)
-
+    state.save_active_tab_state()
     state.active_tab_index = index
     state.tab_selected_index = index
     state.document = state.open_tabs[index]
-
     selectionState.clear_selection()

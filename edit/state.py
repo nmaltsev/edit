@@ -24,6 +24,28 @@ class EditorState:
             return "\t"
         return " " * self.tab_size
 
+    def save_active_tab_state(self):
+        """
+        No copying is required because EditorState.document references the
+        active DocumentState instance stored in open_tabs.
+        """
+        if self.active_tab_index < 0:
+            return
+
+        if self.active_tab_index >= len(self.open_tabs):
+            return
+
+        self.open_tabs[self.active_tab_index] = self.document
+
+    def findExistingTabByPath(self, path: str):
+        tab_index = None
+
+        for index, document in enumerate(self.open_tabs):
+            if document.path == path:
+                tab_index = index
+                break
+        return tab_index
+
 
 class SelectionState:
     def __init__(self):
