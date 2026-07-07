@@ -1,4 +1,7 @@
 import os
+from typing import Optional
+
+Position = tuple[int, int]
 
 class DocumentState:
     def __init__(self, path=None, doc_lines=None):
@@ -7,6 +10,58 @@ class DocumentState:
         self.cursor_offset = [0, 0]
         self.view_offset = 0
         self.modified = False
+
+    def get_selected_text(self, r:Optional[tuple[Position, Position]]) -> str:
+        if not r:
+            return ""
+
+        (r1, c1), (r2, c2) = r
+        if r1 == r2:
+            return self.doc_lines[r1][c1:c2]
+
+        out = [self.doc_lines[r1][c1:]]
+
+        for y in range(r1 + 1, r2):
+            out.append(self.doc_lines[y])
+
+        out.append(self.doc_lines[r2][:c2])
+        return "\n".join(out)
+
+    def delete_selection(self, r:Optional[tuple[Position, Position]]) -> Position:
+        (r1, c1), (r2, c2) = r
+        
+        if r1 == r2:
+            line = self.doc_lines[r1]
+            self.doc_lines[r1] = line[:c1] + line[c2:]
+        else:
+            first = self.doc_lines[r1][:c1]
+            last = self.doc_lines[r2][c2:]
+
+            self.doc_lines[r1] = first + last
+            del self.doc_lines[r1 + 1:r2 + 1]
+
+        return r1, c1
+    
+    def insert_text(self, row, col, text):
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        parts = text.split("\n")
+        line = self.doc_lines[row]
+        before = line[:col]
+        after = line[col:]
+
+        if len(parts) == 1:
+            self.doc_lines[row] = before + text + after
+            return row, col + len(text)
+
+        self.doc_lines[row] = before + parts[0]
+        insert_pos = row + 1
+
+        for p in parts[1:-1]:
+            self.doc_lines.insert(insert_pos, p)
+            insert_pos += 1
+
+        self.doc_lines.insert(insert_pos, parts[-1] + after)
+        return insert_pos, len(parts[-1])
 
 class EditorState:
     def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box=(1, 1, 50, 20)):
@@ -48,14 +103,14 @@ class EditorState:
 
 
 class SelectionState:
-    def __init__(self):
-        self.active = False
-        self.anchor = None
-        self.end = None
-        self.in_progress = False
+    def __init__(self) -> None:
+        self.active: bool = False
+        self.anchor: Optional[Position] = None
+        self.end: Optional[Position] = None
+        self.in_progress: bool = False
 
-    def normalize_selection(self):
-        if not self.anchor or not self.end:
+    def normalize_selection(self) -> Optional[tuple[Position, Position]]:
+        if self.anchor is None or self.end is None:
             return None
 
         a = self.anchor
@@ -66,22 +121,22 @@ class SelectionState:
 
         return b, a
 
-    def has_selection(self):
+    def has_selection(self) -> bool:
         r = self.normalize_selection()
 
-        if not r:
+        if r is None:
             return False
 
         a, b = r
         return a != b
 
-    def clear_selection(self):
+    def clear_selection(self) -> None:
         self.active = False
         self.anchor = None
         self.end = None
         self.in_progress = False
 
-    def begin_selection(self, row, col):
+    def begin_selection(self, row: int, col: int) -> None:
         if not self.active:
             self.active = True
             self.anchor = (row, col)
@@ -89,12 +144,11 @@ class SelectionState:
         self.end = (row, col)
         self.in_progress = True
 
-    def update_selection(self, row, col):
+    def update_selection(self, row: int, col: int) -> None:
         self.end = (row, col)
 
-    def finalize_selection(self):
+    def finalize_selection(self) -> None:
         self.in_progress = False
-
 
 class FileBrowserState:
     def __init__(self, start_path=None, view_box=(0, 0, 30, 20)):

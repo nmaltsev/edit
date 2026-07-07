@@ -136,7 +136,6 @@ class EditorApplication:
         ):
             self.mode = MODE.EDIT if self.mode == MODE.LOG else MODE.LOG
 
-            # TODO process_
             clear()
 
             if self.mode == MODE.EDIT:
@@ -152,32 +151,18 @@ class EditorApplication:
             self.prev_key = key
             return True
 
-        if key == "ALT+RIGHT":
-            if self.mode == MODE.FILE_BROWSER:
+        if key in ("ALT+RIGHT", "ALT+T", "ALT+E", "ALT+B"):
+            if key == "ALT+RIGHT":
+                self.mode = MODE.TAB_BROWSER if self.mode == MODE.FILE_BROWSER else MODE.EDIT if self.mode == MODE.TAB_BROWSER else MODE.FILE_BROWSER
+            elif key == "ALT+T":
                 self.mode = MODE.TAB_BROWSER
-            elif self.mode == MODE.TAB_BROWSER:
+            elif key == "ALT+E":
                 self.mode = MODE.EDIT
-            else:
+            elif key == "ALT+B":
                 self.mode = MODE.FILE_BROWSER
 
             clear()
             redraw_all(self.state, self.selectionState, self.browser)
-
-            self.prev_key = key
-            return True
-
-            self.mode = MODE.FILE_BROWSER
-
-            draw_status_line(
-                self.state,
-                self.browser,
-            )
-
-            draw_file_browser(
-                self.browser,
-            )
-
-            sys.stdout.flush()
             self.prev_key = key
             return True
 
@@ -189,17 +174,11 @@ class EditorApplication:
         while True:
             key = get_key()
 
-            if self.handle_refresh(key):
-                continue
-
-            if self.handle_global_shortcuts(key):
+            if self.handle_refresh(key) or self.handle_global_shortcuts(key):
                 continue
 
             if self.mode == MODE.LOG:
-                if handle_log_mode(
-                    key,
-                    self.prev_key,
-                ):
+                if handle_log_mode(key, self.prev_key):
                     break
 
                 self.prev_key = key

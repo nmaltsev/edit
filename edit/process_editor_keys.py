@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 
-from .editor_helpers import (
-    get_selected_text,
+from .editor_helpers import ( 
     delete_selection,
-    insert_text,
     replace_selection,
     shift_selected_lines,
     build_visual_lines,
@@ -142,12 +140,12 @@ def process_editor_keys(key, prev_key, state, selectionState):
         selection_consumed = False
 
         if key == "CTRL_C":
-            copy_to_clipboard(get_selected_text(state, selectionState))
+            copy_to_clipboard(state.document.get_selected_text(selectionState.normalize_selection()))
             selection_consumed = True
 
         elif key == "CTRL_X":
-            copy_to_clipboard(get_selected_text(state, selectionState))
-            pos = delete_selection(state, selectionState)
+            copy_to_clipboard(state.document.get_selected_text(selectionState.normalize_selection()))
+            pos = delete_selection(state.document, selectionState)
 
             if pos:
                 doc_y, real_x = pos
@@ -156,7 +154,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
             selection_consumed = True
 
         elif key in ("DELETE", "BACKSPACE"):
-            pos = delete_selection(state, selectionState)
+            pos = delete_selection(state.document, selectionState)
 
             if pos:
                 doc_y, real_x = pos
@@ -270,12 +268,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 doc_y, real_x = pos
                 document.modified = True
         else:
-            doc_y, real_x = insert_text(
-                state,
-                doc_y,
-                real_x,
-                text,
-            )
+            doc_y, real_x = state.document.insert_text(doc_y, real_x, text)
             document.modified = True
 
     # --------------------------------------------------
@@ -283,12 +276,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     elif key == "TAB":
         if not selectionState.has_selection():
-            doc_y, real_x = insert_text(
-                state,
-                doc_y,
-                real_x,
-                state.get_tab(),
-            )
+            doc_y, real_x = state.document.insert_text(doc_y, real_x, state.get_tab())
             document.modified = True
 
     # --------------------------------------------------

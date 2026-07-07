@@ -5,93 +5,26 @@ from .utils.text import fill
 from .syntax_highlighting import render_line
 
 
-def get_selected_text(state, selectionState):
-    # TODO implement document.get_selected_text(selectionState)
-    document = state.document
-    r = selectionState.normalize_selection()
-
-    if not r:
-        return ""
-
-    (r1, c1), (r2, c2) = r
-    lines = document.doc_lines
-
-    if r1 == r2:
-        return lines[r1][c1:c2]
-
-    out = [lines[r1][c1:]]
-
-    for y in range(r1 + 1, r2):
-        out.append(lines[y])
-
-    out.append(lines[r2][:c2])
-
-    return "\n".join(out)
-
-
-def delete_selection(state, selectionState):
-    document = state.document
+def delete_selection(document, selectionState):
     r = selectionState.normalize_selection()
 
     if not r:
         return None
 
-    (r1, c1), (r2, c2) = r
-    doc_lines = document.doc_lines
-
-    if r1 == r2:
-        line = doc_lines[r1]
-        doc_lines[r1] = line[:c1] + line[c2:]
-    else:
-        first = doc_lines[r1][:c1]
-        last = doc_lines[r2][c2:]
-
-        doc_lines[r1] = first + last
-        del doc_lines[r1 + 1:r2 + 1]
-
+    selection_start_pos = document.delete_selection(r)
     selectionState.clear_selection()
-
-    return r1, c1
-
-
-def insert_text(state, row, col, text):
-    document = state.document
-
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
-    parts = text.split("\n")
-
-    doc_lines = document.doc_lines
-    line = doc_lines[row]
-
-    before = line[:col]
-    after = line[col:]
-
-    if len(parts) == 1:
-        doc_lines[row] = before + text + after
-        return row, col + len(text)
-
-    doc_lines[row] = before + parts[0]
-
-    insert_pos = row + 1
-
-    for p in parts[1:-1]:
-        doc_lines.insert(insert_pos, p)
-        insert_pos += 1
-
-    doc_lines.insert(insert_pos, parts[-1] + after)
-
-    return insert_pos, len(parts[-1])
+    return selection_start_pos
 
 
 def replace_selection(state, selectionState, text):
-    pos = delete_selection(state, selectionState)
+    pos = delete_selection(state.document, selectionState)
 
     if pos is None:
         return None
 
     row, col = pos
 
-    return insert_text(state, row, col, text)
+    return state.document.insert_text(row, col, text)
 
 
 def _unindent_line(line, state):
