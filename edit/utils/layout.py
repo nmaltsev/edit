@@ -3,7 +3,7 @@ import os
 from edit import ENABLE_TABS
 from edit.utils.kbd import get_key, clear, move_cursor
 from edit.utils.ui import trim_path
-from edit.file_helpers import load_file
+from edit.utils.file_helpers import load_file
 from edit.editor_helpers import print_status, initial_set
 from edit.file_browser_helpers import draw_file_browser
 from edit.state import DocumentState
@@ -113,19 +113,6 @@ def prompt_text(message):
             print(key, end="", flush=True)
 
 
-def find_files(root_path, pattern):
-    results = []
-
-    pattern = pattern.lower()
-
-    for root, dirs, files in os.walk(root_path):
-        for filename in files:
-            if pattern in filename.lower():
-                results.append(os.path.join(root, filename))
-
-    return results
-
-
 def show_find_results(results):
     clear()
 
@@ -156,14 +143,7 @@ def reset_editor(state, selectionState):
 
 
 def open_editor_file(state, selectionState, path):
-    # TODO use findExistingTabByPath
     existing = state.findExistingTabByPath(path)
-    # existing = None
-
-    # for index, document in enumerate(state.open_tabs):
-    #     if document.path == path:
-    #         existing = index
-    #         break
 
     if existing is None:
         document = DocumentState(
@@ -180,21 +160,6 @@ def open_editor_file(state, selectionState, path):
     state.document = state.open_tabs[state.active_tab_index]
 
     selectionState.clear_selection()
-
-# DEPRECATED
-# def save_active_tab_state(state):
-#     """
-#     No copying is required because EditorState.document references the
-#     active DocumentState instance stored in open_tabs.
-#     """
-#     if state.active_tab_index < 0:
-#         return
-
-#     if state.active_tab_index >= len(state.open_tabs):
-#         return
-
-#     state.open_tabs[state.active_tab_index] = state.document
-
 
 def activate_tab(state, selectionState, index):
     if index < 0 or index >= len(state.open_tabs):

@@ -3,7 +3,7 @@ import os
 from .utils.kbd import move_cursor
 from .utils.ui import trim_name
 from .utils.text import fill
-from .file_helpers import load_file
+from .utils.file_helpers import load_file
 
 
 def draw_file_browser(browser):
@@ -44,6 +44,9 @@ def process_file_browser_key(key, browser, editor_state):
             if browser.selected_index < browser.scroll_offset:
                 browser.scroll_offset -= 1
 
+    if key == "HOME":
+        browser.selected_index = browser.scroll_offset = 0
+
     elif key == "DOWN":
         if browser.selected_index < len(browser.items) - 1:
             browser.selected_index += 1
@@ -79,5 +82,8 @@ def process_file_browser_key(key, browser, editor_state):
 
     elif key == "CTRL_P":
         return ("FIND_BY_FNAME", browser.current_path)
+
+    elif key == "CTRL_O":
+        return ("OPEN", browser.current_path)
 
     return None

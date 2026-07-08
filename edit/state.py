@@ -101,6 +101,51 @@ class EditorState:
                 break
         return tab_index
 
+    def unindent_line(self, line:str):
+        indent = self.get_tab()
+
+        if indent == "\t":
+            if line.startswith(indent):
+                return line[1:]
+
+            return line
+
+        if line.startswith(indent):
+            return line[len(indent):]
+
+        if line.startswith("\t"):
+            return line[1:]
+
+        stripped = 0
+
+        while (
+            stripped < self.tab_size
+            and stripped < len(line)
+            and line[stripped] == " "
+        ):
+            stripped += 1
+
+        return line[stripped:]
+    
+    def build_visual_lines(self):
+        visual = []
+        width = max(1, self.view_box[2])
+
+        for doc_y, line in enumerate(self.document.doc_lines):
+            expanded = line.expandtabs(self.tab_size)
+
+            if expanded == "":
+                visual.append((doc_y, 0, ""))
+                continue
+
+            start = 0
+
+            while start < len(expanded):
+                segment = expanded[start:start + width]
+                visual.append((doc_y, start, segment))
+                start += width
+
+        return visual
 
 class SelectionState:
     def __init__(self) -> None:

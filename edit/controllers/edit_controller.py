@@ -4,7 +4,7 @@ from ..utils.layout import draw_status_line, redraw_all, prompt_text, reset_edit
 from ..file_browser_helpers import draw_file_browser
 from ..editor_helpers import print_status
 from ..process_editor_keys import process_editor_keys
-from ..file_helpers import save_file
+from ..utils.file_helpers import save_file
 
 def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
     document = state.document

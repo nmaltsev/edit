@@ -6,7 +6,6 @@ from ..utils.layout import (
     redraw_all,
     draw_status_line,
     prompt_text,
-    find_files,
     show_find_results,
     confirm_delete,
     reset_editor,
@@ -14,7 +13,7 @@ from ..utils.layout import (
 )
 from ..editor_helpers import print_status, initial_set
 from ..file_browser_helpers import draw_file_browser, process_file_browser_key
-from ..file_helpers import rm_path
+from ..utils.file_helpers import rm_path, extend_path, find_files
 
 
 def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser):
@@ -23,10 +22,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             clear()
             return True, mode
 
-        print_status(
-            state,
-            "Press CTRL_Q again to exit",
-        )
+        print_status(state, "Press CTRL_Q again to exit")
 
         return False, mode
 
@@ -72,16 +68,10 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             if confirm_delete(path):
                 try:
                     rm_path(path)
-
                 except Exception as ex:
                     clear()
-
                     redraw_all(state, selectionState, browser)
-
-                    print_status(
-                        state,
-                        str(ex),
-                    )
+                    print_status(state, str(ex))
 
                     return False, mode
 
@@ -166,76 +156,56 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
             if new_name:
                 try:
-                    target = os.path.join(
-                        os.path.dirname(path),
-                        new_name,
-                    )
-
-                    os.rename(
-                        path,
-                        target,
-                    )
-
+                    target = os.path.join(os.path.dirname(path), new_name)
+                    os.rename(path, target)
                 except Exception as ex:
                     clear()
-
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
-
-                    print_status(
-                        state,
-                        str(ex),
-                    )
+                    redraw_all(state, selectionState, browser)
+                    print_status(state, str(ex))
 
                     return False, mode
 
             browser.refresh()
-
             clear()
-
-            redraw_all(
-                state,
-                selectionState,
-                browser,
-            )
+            redraw_all(state, selectionState, browser)
 
             return False, mode
 
         elif action == "FIND_BY_FNAME":
-            pattern = prompt_text(
-                "Enter file name pattern and press enter"
-            )
+            pattern = prompt_text("Enter file name pattern and press enter")
 
             if pattern:
-                results = find_files(
-                    path,
-                    pattern,
-                )
-
-                show_find_results(
-                    results,
-                )
-
+                # TODO need to be rfactored
+                results = find_files(path, pattern)
+                show_find_results(results)
             clear()
+            redraw_all(state, selectionState, browser)
 
-            redraw_all(
-                state,
-                selectionState,
-                browser,
-            )
+            return False, mode
+        elif action == "OPEN":
+            promoted_path = extend_path(prompt_text("Enter the path and press enter").strip(), path)
+
+            if promoted_path:
+                if os.path.isdir(promoted_path):
+                    browser.current_path = promoted_path
+                    browser.selected_index = 0
+                    browser.scroll_offset = 0
+                    browser.refresh()
+                elif os.path.exists(promoted_path):
+                    open_editor_file(state, selectionState, promoted_path)
+                    mode = type(mode).EDIT
+                    # TODO test if this code is necessery
+                    # redraw_all(state, selectionState, browser)
+                    # sys.stdout.flush()
+                    # print(end='')
+                    # return False, mode
+                
+            clear()
+            redraw_all(state, selectionState, browser)
 
             return False, mode
 
-    draw_status_line(
-        state,
-        browser,
-    )
-
-    draw_file_browser(
-        browser,
-    )
+    draw_status_line(state, browser)
+    draw_file_browser(browser)
 
     return False, mode

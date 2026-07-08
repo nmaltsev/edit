@@ -4,7 +4,6 @@ from .editor_helpers import (
     delete_selection,
     replace_selection,
     shift_selected_lines,
-    build_visual_lines,
     move_page,
     fill_view_box,
     get_status,
@@ -66,7 +65,7 @@ def _doc_to_display_col(line, doc_col, tab_size):
 def process_editor_keys(key, prev_key, state, selectionState):
     document = state.document
 
-    visual = build_visual_lines(state)
+    visual = state.build_visual_lines()
 
     if not visual:
         visual = [(0, 0, "")]
@@ -190,7 +189,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
             selectionState.clear_selection()
 
         if selection_consumed:
-            visual = build_visual_lines(state)
+            visual = state.build_visual_lines()
 
             if not visual:
                 visual = [(0, 0, "")]
@@ -424,7 +423,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     # Rebuild screen
     # --------------------------------------------------
-    visual = build_visual_lines(state)
+    visual = state.build_visual_lines()
 
     display_x = _doc_to_display_col(
         document.doc_lines[doc_y],

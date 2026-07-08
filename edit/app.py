@@ -7,7 +7,7 @@ from .utils.layout import draw_status_line, redraw_all, resize_layout
 from .state import EditorState, SelectionState, FileBrowserState, DocumentState
 from .editor_helpers import initial_set, print_status
 from .utils.layout import reset_editor
-from .file_helpers import load_file
+from .utils.file_helpers import load_file
 from .file_browser_helpers import draw_file_browser
 from .process_editor_keys import process_editor_keys
 from .controllers.edit_controller import handle_edit_mode
