@@ -8,8 +8,19 @@ KEY_MAP = {
   13: 'ENTER',
   #27: 'ESC',
   32: 'SPACE',
+  127: 'BACKSPACE',
 }
 
+def litter_key(code:int):
+  if code == 65:
+    return 'UP'
+  if code == 66:
+    return 'DOWN'
+  if code == 67:
+    return 'RIGHT'
+  if code == 68:
+    return 'LEFT'
+  return None
 
 def read_sequence():
     seq = []
@@ -23,17 +34,78 @@ def read_sequence():
           code = ord(ch)
           
           if (
-            c == 0 and (32 < code < 129)):
+            c == 0 and (32 < code < 127)):
             return ch
 
           if c == 0 and code in KEY_MAP:
             return KEY_MAP[code]
 
+          # does not distingush Ctrl + a and ctrl + A 
           if c == 0 and (0 < code < 27):
             # Does not detect Ctrl+I
             return f"CTRL_{chr(code + 64)}"
+          
+          arrow_name = litter_key(code) 
+          if arrow_name:
+            if seq == [27,91]:
+              return arrow_name
+            if seq == [27,91,49,59,50]:
+              return 'SHIFT_' + arrow_name
+            if seq == [27,91,49,59,53]:
+              return 'CTRL_' + arrow_name
+            if seq == [27,91,49,59,51]:
+              return 'ALT_' + arrow_name
+            if seq == [27,91,49,59,52]:
+              return 'SHIFT+ALT_' + arrow_name
+            if seq == [27,91,49,59,54]:
+              return 'CTRL+SHIFT_' + arrow_name
+            if seq == [27,91,49,59,55]:
+              return 'CTRL+ALT_' + arrow_name
+            if seq == [27,91,49,59,56]:
+              return 'CTRL+SHIFT+ALT_' + arrow_name
+            
+            
+          if code == 126:
+            if seq == [27,91,52]:
+              return 'END'
+            if seq == [27,91,53]:
+              return 'PAGE_UP'
+            if seq == [27,91,54]:
+              return 'PAGE_DOWN'
+            if seq == [27,91,49]:
+              return 'HOME'
+            if seq == [27,91,51]:
+              return 'DEL'
+            if seq == [27,91,49,53]:
+              return 'F5'
+            if seq == [27,91,49,55]:
+              return 'F6'
+            if seq == [27,91,49,56]:
+              return 'F7'
+            if seq == [27,91,49,57]:
+              return 'F8'
+            if seq == [27,91,50,48]:
+              return 'F9'
+            if seq == [27,91,50,49]:
+              return 'F10'
+            if seq == [27,91,50,52]:
+              return 'F12'
 
-          print(f"{code=} {c=}", file=sys.stderr, end='\n')
+          if seq == [27,79]:
+            if code == 80:
+              return 'F1'
+            if code == 81:
+              return 'F2'
+            if code == 82:
+              return 'F3'
+            if code == 83:
+              return 'F4'
+
+          #print(
+          #  f"{code=} {c=}", 
+          #  file=sys.stderr, 
+          #  end='\n'
+          #)
           seq.append(code)
   
           c+=1
