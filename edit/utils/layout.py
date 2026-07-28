@@ -1,7 +1,8 @@
 import os
 
 from edit import ENABLE_TABS
-from edit.utils.kbd import get_key, clear, move_cursor
+from edit.utils.kbd import get_key
+from edit.utils.terminal import clear, move_cursor
 from edit.utils.ui import trim_path
 from edit.utils.file_helpers import load_file
 from edit.editor_helpers import print_status, initial_set

@@ -2,7 +2,8 @@ import os
 import sys
 from enum import Enum
 
-from .utils.kbd import get_key, clear
+from .utils.kbd import get_key
+from .utils.terminal import clear
 from .utils.layout import draw_status_line, redraw_all, resize_layout
 from .state import EditorState, SelectionState, FileBrowserState, DocumentState
 from .editor_helpers import initial_set, print_status

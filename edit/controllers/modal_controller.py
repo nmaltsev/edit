@@ -1,4 +1,4 @@
-from ..utils.kbd import clear
+from ..utils.terminal import clear
 from ..utils.layout import redraw_all, reset_editor
 from ..editor_helpers import print_status
 

@@ -1,6 +1,6 @@
 import sys
 
-from .utils.kbd import clear, move_cursor
+from .utils.terminal import clear, move_cursor
 from .utils.text import fill
 from .syntax_highlighting import render_line
 

@@ -1,1 +1,1 @@
-from ..utils.kbd import clear
+from ..utils.terminal import clear

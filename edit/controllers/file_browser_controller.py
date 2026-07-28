@@ -1,7 +1,7 @@
 import os
 import sys
 
-from ..utils.kbd import clear
+from ..utils.terminal import clear
 from ..utils.layout import (
     redraw_all,
     draw_status_line,

@@ -33,8 +33,7 @@ def read_sequence():
           ch = sys.stdin.read(1)
           code = ord(ch)
           
-          if (
-            c == 0 and (32 < code < 127)):
+          if c == 0 and (32 < code < 127):
             return ch
 
           if c == 0 and code in KEY_MAP:
@@ -64,18 +63,19 @@ def read_sequence():
             if seq == [27,91,49,59,56]:
               return 'CTRL+SHIFT+ALT_' + arrow_name
             
-            
           if code == 126:
+            if seq == [27,91,49]:
+              return 'HOME'
+            if seq == [27,91,50]:
+              return 'INS'
+            if seq == [27,91,51]:
+              return 'DEL'
             if seq == [27,91,52]:
               return 'END'
             if seq == [27,91,53]:
               return 'PAGE_UP'
             if seq == [27,91,54]:
               return 'PAGE_DOWN'
-            if seq == [27,91,49]:
-              return 'HOME'
-            if seq == [27,91,51]:
-              return 'DEL'
             if seq == [27,91,49,53]:
               return 'F5'
             if seq == [27,91,49,55]:
@@ -90,6 +90,14 @@ def read_sequence():
               return 'F10'
             if seq == [27,91,50,52]:
               return 'F12'
+            if seq == [27,27,91,50]:
+              return 'ALT+INS'
+            if seq == [27,27,91,51]:
+              return 'ALT+DEL'
+            if seq == [27,27,91,53]:
+              return 'ALT+PAGE_UP'
+            if seq == [27,27,91,54]:
+              return 'ALT+PAGE_DOWN'
 
           if seq == [27,79]:
             if code == 80:
@@ -100,14 +108,25 @@ def read_sequence():
               return 'F3'
             if code == 83:
               return 'F4'
-
-          #print(
-          #  f"{code=} {c=}", 
-          #  file=sys.stderr, 
+          if seq == [27,91]:
+            if code == 90:
+              return 'SHIFT+TAB'
+          if seq == [27,91,49,59,50]:
+            if code == 72:
+              return 'SHIFT+HOME'
+            if code == 70:
+              return 'SHIFT+END'
+          if seq == [27,91,49,59,51]:
+            if code == 72:
+              return 'ALT+HOME'
+            if code == 70:
+              return 'ALT+END'
+          print(
+           f"{code=} {c=}", 
+           file=sys.stderr, 
           #  end='\n'
-          #)
+          )
           seq.append(code)
-  
           c+=1
     finally:
       termios.tcsetattr(

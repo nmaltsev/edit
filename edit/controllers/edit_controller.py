@@ -1,5 +1,5 @@
 import sys, os
-from ..utils.kbd import clear
+from ..utils.terminal import clear
 from ..utils.layout import draw_status_line, redraw_all, prompt_text, reset_editor, draw_tab_panel
 from ..file_browser_helpers import draw_file_browser
 from ..editor_helpers import print_status
