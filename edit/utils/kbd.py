@@ -6,8 +6,8 @@ import termios
 KEY_MAP = {
   9: 'TAB', # the same as Ctrl_I !
   13: 'ENTER',
-  #27: 'ESC',
-  32: 'SPACE',
+  # 27: 'ESC',
+  # 32: 'SPACE',
   127: 'BACKSPACE',
 }
 
@@ -33,7 +33,7 @@ def read_sequence():
           ch = sys.stdin.read(1)
           code = ord(ch)
           
-          if c == 0 and (32 < code < 127):
+          if c == 0 and (31 < code < 127):
             return ch
 
           if c == 0 and code in KEY_MAP:
