@@ -82,26 +82,14 @@ def process_editor_keys(key, prev_key, state, selectionState):
     doc_x = _display_to_doc_col(line, display_x, state.tab_size)
     real_x = doc_x
 
-    shift_move = key in (
-        "SHIFT+LEFT",
-        "SHIFT+RIGHT",
-        "SHIFT+UP",
-        "SHIFT+DOWN",
-        "SHIFT+PAGE_DOWN",
-        "SHIFT+PAGE_UP",
-        "SHIFT+HOME",
-        "SHIFT+END",
-    )
+    shift_move = key in ("SHIFT+LEFT", "SHIFT+RIGHT", "SHIFT+UP", "SHIFT+DOWN", "SHIFT+PAGE_DOWN", "SHIFT+PAGE_UP", "SHIFT+HOME", "SHIFT+END")
 
     # --------------------------------------------------
     # Selection begin/end
     # --------------------------------------------------
     if shift_move:
         if not selectionState.in_progress:
-            selectionState.begin_selection(
-                doc_y,
-                real_x,
-            )
+            selectionState.begin_selection(doc_y, real_x)
     else:
         if selectionState.in_progress:
             selectionState.finalize_selection()
@@ -124,12 +112,11 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     # Shift selected block
     # --------------------------------------------------
-    elif selectionState.has_selection() and key in ("TAB", "[Z"):
+    elif selectionState.has_selection() and key in ("TAB", "SHIFT+TAB"):
         if key == "TAB":
             shift_selected_lines(state, selectionState, 1)
         else:
             shift_selected_lines(state, selectionState, -1)
-
         document.modified = True
 
     # --------------------------------------------------
@@ -141,7 +128,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
         if key == "CTRL_C":
             copy_to_clipboard(state.document.get_selected_text(selectionState.normalize_selection()))
             selection_consumed = True
-
         elif key == "CTRL_X":
             copy_to_clipboard(state.document.get_selected_text(selectionState.normalize_selection()))
             pos = delete_selection(state.document, selectionState)
@@ -151,8 +137,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 document.modified = True
 
             selection_consumed = True
-
-        elif key in ("DELETE", "BACKSPACE"):
+        elif key in ("DEL", "BACKSPACE"):
             pos = delete_selection(state.document, selectionState)
 
             if pos:
@@ -160,7 +145,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 document.modified = True
 
             selection_consumed = True
-
         elif key == "CTRL_V":
             text = paste_from_clipboard()
             pos = replace_selection(state, selectionState, text)
@@ -170,7 +154,6 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 document.modified = True
 
             selection_consumed = True
-
         elif (
             len(key) == 1
             and not key.startswith("CTRL_")
@@ -221,14 +204,12 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 cy = state.view_box[3] - 1
 
             document.cursor_offset = [cx, cy]
-
             fill_view_box(
                 state,
                 state.view_box,
                 visual,
                 cursor=(cx, cy),
             )
-
             ch = ""
 
             if (
@@ -248,11 +229,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
                 ),
             )
 
-            return EditorResult(
-                doc_y=doc_y,
-                real_x=real_x,
-                visual=visual,
-            )
+            return EditorResult(doc_y=doc_y, real_x=real_x, visual=visual)
 
     # --------------------------------------------------
     # Paste
@@ -320,7 +297,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # --------------------------------------------------
     # Delete
     # --------------------------------------------------
-    elif key == "DELETE":
+    elif key == "DEL":
         line = document.doc_lines[doc_y]
 
         if real_x < len(line):
@@ -386,34 +363,11 @@ def process_editor_keys(key, prev_key, state, selectionState):
     elif key in ("END", "SHIFT+END"):
         real_x = len(document.doc_lines[doc_y])
 
-    elif key in (
-        "PAGEDOWN",
-        "PAGE_DOWN",
-        "PAGE DOWN",
-        "SHIFT+PAGEDOWN",
-        "SHIFT+PAGE_DOWN",
-        "SHIFT+PAGE DOWN",
-    ):
-        doc_y, real_x, visual = move_page(
-            state,
-            doc_y,
-            real_x,
-            1,
-        )
+    elif key in ("PAGE_DOWN", "ALT+PAGE_DOWN"):
+        doc_y, real_x, visual = move_page(state, doc_y, real_x, 1)
 
-    elif key in (
-        "PAGEUP",
-        "PAGE_UP",
-        "PAGE UP",
-        "SHIFT+PAGEUP",
-        "SHIFT+PAGE_UP",
-    ):
-        doc_y, real_x, visual = move_page(
-            state,
-            doc_y,
-            real_x,
-            -1,
-        )
+    elif key in ("PAGE_UP", "ALT+PAGE_UP"):
+        doc_y, real_x, visual = move_page(state, doc_y, real_x, -1)
     # --------------------------------------------------
     # Selection update
     # --------------------------------------------------
@@ -424,13 +378,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
     # Rebuild screen
     # --------------------------------------------------
     visual = state.build_visual_lines()
-
-    display_x = _doc_to_display_col(
-        document.doc_lines[doc_y],
-        real_x,
-        state.tab_size,
-    )
-
+    display_x = _doc_to_display_col(document.doc_lines[doc_y], real_x, state.tab_size)
     new_vis_idx = 0
 
     for i, (dy, start, seg) in enumerate(visual):
@@ -452,14 +400,7 @@ def process_editor_keys(key, prev_key, state, selectionState):
         cy = state.view_box[3] - 1
 
     document.cursor_offset = [cx, cy]
-
-    fill_view_box(
-        state,
-        state.view_box,
-        visual,
-        cursor=(cx, cy),
-    )
-
+    fill_view_box(state, state.view_box, visual, cursor=(cx, cy))
     ch = ""
 
     if (
@@ -479,8 +420,4 @@ def process_editor_keys(key, prev_key, state, selectionState):
         ),
     )
 
-    return EditorResult(
-        doc_y=doc_y,
-        real_x=real_x,
-        visual=visual,
-    )
+    return EditorResult(doc_y=doc_y, real_x=real_x, visual=visual)

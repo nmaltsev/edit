@@ -44,24 +44,29 @@ def read_sequence():
             # Does not detect Ctrl+I
             return f"CTRL_{chr(code + 64)}"
           
+          if c == 1 and (0 < code < 27) and seq[0] == 27:
+            # Does not detect Ctrl+I
+            return f"ALT+CTRL_{chr(code + 64)}"
+          
+          
           arrow_name = litter_key(code) 
           if arrow_name:
             if seq == [27,91]:
               return arrow_name
             if seq == [27,91,49,59,50]:
-              return 'SHIFT_' + arrow_name
+              return 'SHIFT+' + arrow_name
             if seq == [27,91,49,59,53]:
-              return 'CTRL_' + arrow_name
+              return 'CTRL+' + arrow_name
             if seq == [27,91,49,59,51]:
-              return 'ALT_' + arrow_name
+              return 'ALT+' + arrow_name
             if seq == [27,91,49,59,52]:
-              return 'SHIFT+ALT_' + arrow_name
+              return 'SHIFT+ALT+' + arrow_name
             if seq == [27,91,49,59,54]:
-              return 'CTRL+SHIFT_' + arrow_name
+              return 'CTRL+SHIFT+' + arrow_name
             if seq == [27,91,49,59,55]:
-              return 'CTRL+ALT_' + arrow_name
+              return 'CTRL+ALT+' + arrow_name
             if seq == [27,91,49,59,56]:
-              return 'CTRL+SHIFT+ALT_' + arrow_name
+              return 'CTRL+SHIFT+ALT+' + arrow_name
             
           if code == 126:
             if seq == [27,91,49]:
@@ -121,19 +126,11 @@ def read_sequence():
               return 'ALT+HOME'
             if code == 70:
               return 'ALT+END'
-          print(
-           f"{code=} {c=}", 
-           file=sys.stderr, 
-          #  end='\n'
-          )
+          print(f"{code=} {c=}", file=sys.stderr)
           seq.append(code)
           c+=1
     finally:
-      termios.tcsetattr(
-          fd,
-          termios.TCSADRAIN,
-          old,
-      )
+      termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
     return str(seq)
 

@@ -21,17 +21,14 @@ def copy_to_clipboard(text):
                 stdin=subprocess.PIPE
             )
             p.communicate(text.encode("utf-8"))
-
         elif system == "Linux":
             p = subprocess.Popen(
                 ["xclip", "-selection", "clipboard"],
                 stdin=subprocess.PIPE
             )
             p.communicate(text.encode("utf-8"))
-
         else:
             clipboard = text
-
     except Exception:
         clipboard = text
 
@@ -49,12 +46,10 @@ def paste_from_clipboard():
             return subprocess.check_output(
                 ["pbpaste"]
             ).decode("utf-8")
-
         elif system == "Linux":
             return subprocess.check_output(
                 ["xclip", "-selection", "clipboard", "-o"]
             ).decode("utf-8")
-
     except Exception:
         pass
 

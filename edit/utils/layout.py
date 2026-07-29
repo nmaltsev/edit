@@ -1,7 +1,7 @@
 import os
 
 from edit import ENABLE_TABS
-from edit.utils.kbd import get_key
+from edit.utils.kbd import read_sequence
 from edit.utils.terminal import clear, move_cursor
 from edit.utils.ui import trim_path
 from edit.utils.file_helpers import load_file
@@ -93,13 +93,13 @@ def prompt_text(message):
     value = ""
 
     while True:
-        key = get_key()
+        key = read_sequence()
 
         if key == "ENTER":
             print()
             return value.strip()
 
-        if key == "ESC":
+        if key == "CTRL_Q":
             return None
 
         if key == "BACKSPACE":
@@ -121,7 +121,7 @@ def show_find_results(results):
         print("No matches found.")
         print()
         print("Press any key...")
-        get_key()
+        read_sequence()
         return
 
     for path in results:
@@ -130,7 +130,7 @@ def show_find_results(results):
         print()
 
     print("Press any key...")
-    get_key()
+    read_sequence()
 
 
 def confirm_delete(path):

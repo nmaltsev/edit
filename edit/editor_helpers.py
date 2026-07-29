@@ -66,15 +66,10 @@ def move_page(state, doc_y, real_x, direction):
     if not visual:
         return 0, 0, visual
 
-    current_vis_idx = find_visual_index(
-        visual,
-        doc_y,
-        real_x,
-    )
+    current_vis_idx = find_visual_index(visual, doc_y, real_x)
 
     _, current_start, _ = visual[current_vis_idx]
     cx = real_x - current_start
-
     target_vis_idx = current_vis_idx + (direction * state.view_box[3])
 
     if target_vis_idx < 0:
@@ -96,11 +91,7 @@ def fill_view_box(state, view_box, visual_lines, cursor=None):
     document = state.document
 
     for i in range(view_box[3]):
-        move_cursor(
-            view_box[0],
-            view_box[1] + i,
-        )
-
+        move_cursor(view_box[0], view_box[1] + i)
         idx = document.view_offset + i
 
         if idx < len(visual_lines):
@@ -116,17 +107,9 @@ def fill_view_box(state, view_box, visual_lines, cursor=None):
             if cx >= len(cursor_text):
                 cursor_text = cursor_text + "_"
             else:
-                cursor_text = (
-                    cursor_text[:cx]
-                    + "_"
-                    + cursor_text[cx:]
-                )
+                cursor_text = cursor_text[:cx] + "_" + cursor_text[cx:]
 
-        rendered = render_line(
-            document.path,
-            cursor_text,
-        )
-
+        rendered = render_line(document.path, cursor_text)
         print(fill(rendered, view_box[2]), end="")
     sys.stdout.flush()
 

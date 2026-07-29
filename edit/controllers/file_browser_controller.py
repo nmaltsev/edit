@@ -26,7 +26,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
         return False, mode
 
-    if key == "ALT+N":
+    if key == "ALT+CTRL_N":
         from ..state import DocumentState
 
         document = DocumentState(path="Untitled")
@@ -86,39 +86,17 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
             if directory_name:
                 try:
-                    os.mkdir(
-                        os.path.join(
-                            path,
-                            directory_name,
-                        )
-                    )
-
+                    os.mkdir(os.path.join(path, directory_name))
                 except Exception as ex:
                     clear()
-
-                    redraw_all(
-                        state,
-                        selectionState,
-                        browser,
-                    )
-
-                    print_status(
-                        state,
-                        str(ex),
-                    )
+                    redraw_all(state, selectionState, browser)
+                    print_status(state, str(ex))
 
                     return False, mode
 
             browser.refresh()
-
             clear()
-
-            redraw_all(
-                state,
-                selectionState,
-                browser,
-            )
-
+            redraw_all(state, selectionState, browser)
             sys.stdout.flush()
 
             return False, mode
@@ -128,10 +106,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
             if filename:
                 try:
-                    full_path = os.path.join(
-                        path,
-                        filename,
-                    )
+                    full_path = os.path.join(path, filename)
 
                     with open(full_path, "w", encoding="utf-8"):
                         pass
@@ -150,9 +125,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             return False, mode
 
         elif action == "RENAME":
-            new_name = prompt_text(
-                f"Rename '{os.path.basename(path)}'"
-            )
+            new_name = prompt_text(f"Rename '{os.path.basename(path)}'")
 
             if new_name:
                 try:

@@ -2,7 +2,7 @@ import os
 import sys
 from enum import Enum
 
-from .utils.kbd import get_key
+from .utils.kbd import read_sequence
 from .utils.terminal import clear
 from .utils.layout import draw_status_line, redraw_all, resize_layout
 from .state import EditorState, SelectionState, FileBrowserState, DocumentState
@@ -131,19 +131,14 @@ class EditorApplication:
         return True
 
     def handle_global_shortcuts(self, key):
-        if key == "CTRL_P" and (
-            self.mode == MODE.EDIT
-            or self.mode == MODE.LOG
-        ):
+        if key == "CTRL_P" and (self.mode == MODE.EDIT or self.mode == MODE.LOG):
             self.mode = MODE.EDIT if self.mode == MODE.LOG else MODE.LOG
-
             clear()
 
             if self.mode == MODE.EDIT:
                 draw_status_line(self.state, self.browser)
                 initial_set(self.state, self.selectionState)
                 draw_file_browser(self.browser)
-
                 print(end="")
                 sys.stdout.flush()
             else:
@@ -152,14 +147,14 @@ class EditorApplication:
             self.prev_key = key
             return True
 
-        if key in ("ALT+RIGHT", "ALT+T", "ALT+E", "ALT+B"):
+        if key in ("ALT+RIGHT", "CTRL+UP", "CTRL+LEFT", "CTRL+DOWN"):
             if key == "ALT+RIGHT":
                 self.mode = MODE.TAB_BROWSER if self.mode == MODE.FILE_BROWSER else MODE.EDIT if self.mode == MODE.TAB_BROWSER else MODE.FILE_BROWSER
-            elif key == "ALT+T":
+            elif key == "CTRL+UP":
                 self.mode = MODE.TAB_BROWSER
-            elif key == "ALT+E":
+            elif key == "CTRL+DOWN":
                 self.mode = MODE.EDIT
-            elif key == "ALT+B":
+            elif key == "CTRL+LEFT":
                 self.mode = MODE.FILE_BROWSER
 
             clear()
@@ -173,7 +168,7 @@ class EditorApplication:
         self.initialize()
 
         while True:
-            key = get_key()
+            key = read_sequence()
 
             if self.handle_refresh(key) or self.handle_global_shortcuts(key):
                 continue

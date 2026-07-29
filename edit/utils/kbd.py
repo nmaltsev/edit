@@ -2,246 +2,133 @@ import sys
 import tty
 import termios
 
-# =========================================================
-# BASE KEY MAPPINGS
-# =========================================================
 
-ANSI_KEYS = {
-    "A": "UP",
-    "B": "DOWN",
-    "C": "RIGHT",
-    "D": "LEFT",
-    "H": "HOME",
-    "F": "END",
+KEY_MAP = {
+  9: 'TAB', # the same as Ctrl_I !
+  13: 'ENTER',
+  #27: 'ESC',
+  32: 'SPACE',
+  127: 'BACKSPACE',
 }
 
-ANSI_TILDE_KEYS = {
-    "1": "HOME",
-    "2": "INSERT",
-    "3": "DELETE",
-    "4": "END",
-    "5": "PAGE_UP",
-    "6": "PAGE_DOWN",
-    "7": "HOME",
-    "8": "END",
-}
+def litter_key(code:int):
+  if code == 65:
+    return 'UP'
+  if code == 66:
+    return 'DOWN'
+  if code == 67:
+    return 'RIGHT'
+  if code == 68:
+    return 'LEFT'
+  return None
 
-CTRL_KEYS = {
-    "\x03": "CTRL_C",
-    "\x04": "CTRL_D",
-    "\x08": "BACKSPACE",
-    "\x7f": "BACKSPACE",
-    "\r": "ENTER",
-    "\n": "ENTER",
-    "\t": "TAB",
-    "\x1b": "ESC",
-}
-
-# ANSI modifier codes
-# 2=Shift, 3=Alt, 5=Ctrl, 6=Ctrl+Shift ...
-MODIFIERS = {
-    2: "SHIFT",
-    3: "ALT",
-    4: "ALT+SHIFT",
-    5: "CTRL",
-    6: "CTRL+SHIFT",
-    7: "CTRL+ALT",
-    8: "CTRL+ALT+SHIFT",
-}
-
-BRACKETED_PASTE_BEGIN = "\x1b[200~"
-BRACKETED_PASTE_END = "\x1b[201~"
-
-
-# =========================================================
-# POSIX KEY READER
-# =========================================================
-
-def _read_escape_sequence():
-    """
-    Read full ANSI escape sequence after ESC.
-    """
-    seq = ""
-
-    while True:
-        ch = sys.stdin.read(1)
-        seq += ch
-
-        if ch.isalpha() or ch == "~":
-            break
-
-    return seq
-
-
-def _read_bracketed_paste():
-    """
-    Read terminal bracketed paste payload.
-    """
-    data = []
-    tail = ""
-
-    while True:
-        ch = sys.stdin.read(1)
-
-        data.append(ch)
-        tail += ch
-
-        if len(tail) > len(BRACKETED_PASTE_END):
-            tail = tail[-len(BRACKETED_PASTE_END):]
-
-        if tail.endswith(BRACKETED_PASTE_END):
-            data = data[:-len(BRACKETED_PASTE_END)]
-            break
-
-    text = "".join(data)
-
-    return (
-        text
-        .replace("\r\n", "\n")
-        .replace("\r", "\n")
-    )
-
-
-def _normalize_modifier_key(modifier, key):
-    """
-    Normalize combinations to match editor expectations.
-    """
-
-    if key in ("UP", "DOWN", "LEFT", "RIGHT"):
-        if modifier in ("ALT+SHIFT", "CTRL+ALT+SHIFT"):
-            return f"SHIFT+{key}"
-
-        if modifier in ("CTRL+SHIFT", "CTRL+ALT"):
-            return f"CTRL+{key}"
-
-    if key in ("PAGE_UP", "PAGE_DOWN"):
-        if modifier:
-            return key
-
-    return f"{modifier}+{key}" if modifier else key
-
-
-def _decode_escape_sequence(seq):
-    """
-    Decode ANSI escape sequences.
-    """
-
-    if not seq:
-        return "ESC"
-
-    if seq == "[200~":
-        return "__BRACKETED_PASTE__"
-
-    if not seq.startswith("["):
-        if len(seq) == 1:
-            ch = seq
-
-            if ch.isalpha():
-                return f"ALT+{ch.upper()}"
-
-            if ch.isdigit():
-                return f"ALT+{ch}"
-
-        return "ESC"
-
-    body = seq[1:]
-
-    if body in ANSI_KEYS:
-        return ANSI_KEYS[body]
-
-    if ";" in body:
-        _, rest = body.split(";", 1)
-
-        mod_code = ""
-        key_code = ""
-
-        for ch in rest:
-            if ch.isdigit():
-                mod_code += ch
-            else:
-                key_code += ch
-
-        modifier = ""
-
-        if mod_code.isdigit():
-            modifier = MODIFIERS.get(
-                int(mod_code),
-                "",
-            )
-
-        if key_code.endswith("~"):
-            key = ANSI_TILDE_KEYS.get(
-                key_code[:-1],
-                key_code[:-1],
-            )
-        else:
-            key = ANSI_KEYS.get(
-                key_code,
-                key_code,
-            )
-
-        return _normalize_modifier_key(
-            modifier,
-            key,
-        )
-
-    if body.endswith("~"):
-        code = body[:-1]
-
-        return ANSI_TILDE_KEYS.get(
-            code,
-            code,
-        )
-
-    return seq
-
-
-# =========================================================
-# MAIN API
-# =========================================================
-
-def get_key():
+def read_sequence():
+    seq = []
+    c = 0
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
+    try:  
+      tty.setraw(fd)
+      while True and c < 6:
+          ch = sys.stdin.read(1)
+          code = ord(ch)
+          
+          if c == 0 and (32 < code < 127):
+            return ch
 
-    try:
-        tty.setraw(fd)
+          if c == 0 and code in KEY_MAP:
+            return KEY_MAP[code]
 
-        ch = sys.stdin.read(1)
-
-        if ch == "\x1b":
-            seq = _read_escape_sequence()
-
-            if seq == "[200~":
-                return _read_bracketed_paste()
-
-            return _decode_escape_sequence(seq)
-
-        if ch in CTRL_KEYS:
-            return CTRL_KEYS[ch]
-
-        code = ord(ch)
-
-        if 1 <= code <= 26:
+          # does not distingush Ctrl + a and ctrl + A 
+          if c == 0 and (0 < code < 27):
+            # Does not detect Ctrl+I
             return f"CTRL_{chr(code + 64)}"
+        
+          if c == 1 and (0 < code < 27) and seq[0] == 27:
+            # Does not detect Ctrl+I
+            return f"ALT+CTRL_{chr(code + 64)}"
+          
+          arrow_name = litter_key(code) 
+          if arrow_name:
+            if seq == [27,91]:
+              return arrow_name
+            if seq == [27,91,49,59,50]:
+              return 'SHIFT+' + arrow_name
+            if seq == [27,91,49,59,53]:
+              return 'CTRL+' + arrow_name
+            if seq == [27,91,49,59,51]:
+              return 'ALT+' + arrow_name
+            if seq == [27,91,49,59,52]:
+              return 'SHIFT+ALT+' + arrow_name
+            if seq == [27,91,49,59,54]:
+              return 'CTRL+SHIFT+' + arrow_name
+            if seq == [27,91,49,59,55]:
+              return 'CTRL+ALT+' + arrow_name
+            if seq == [27,91,49,59,56]:
+              return 'CTRL+SHIFT+ALT+' + arrow_name
+            
+          if code == 126:
+            if seq == [27,91,49]:
+              return 'HOME'
+            if seq == [27,91,50]:
+              return 'INS'
+            if seq == [27,91,51]:
+              return 'DEL'
+            if seq == [27,91,52]:
+              return 'END'
+            if seq == [27,91,53]:
+              return 'PAGE_UP'
+            if seq == [27,91,54]:
+              return 'PAGE_DOWN'
+            if seq == [27,91,49,53]:
+              return 'F5'
+            if seq == [27,91,49,55]:
+              return 'F6'
+            if seq == [27,91,49,56]:
+              return 'F7'
+            if seq == [27,91,49,57]:
+              return 'F8'
+            if seq == [27,91,50,48]:
+              return 'F9'
+            if seq == [27,91,50,49]:
+              return 'F10'
+            if seq == [27,91,50,52]:
+              return 'F12'
+            if seq == [27,27,91,50]:
+              return 'ALT+INS'
+            if seq == [27,27,91,51]:
+              return 'ALT+DEL'
+            if seq == [27,27,91,53]:
+              return 'ALT+PAGE_UP'
+            if seq == [27,27,91,54]:
+              return 'ALT+PAGE_DOWN'
 
-        return ch
-
+          if seq == [27,79]:
+            if code == 80:
+              return 'F1'
+            if code == 81:
+              return 'F2'
+            if code == 82:
+              return 'F3'
+            if code == 83:
+              return 'F4'
+          if seq == [27,91]:
+            if code == 90:
+              return 'SHIFT+TAB'
+          if seq == [27,91,49,59,50]:
+            if code == 72:
+              return 'SHIFT+HOME'
+            if code == 70:
+              return 'SHIFT+END'
+          if seq == [27,91,49,59,51]:
+            if code == 72:
+              return 'ALT+HOME'
+            if code == 70:
+              return 'ALT+END'
+        #   print(f"{code=} {c=}", file=sys.stderr)
+          seq.append(code)
+          c+=1
     finally:
-        termios.tcsetattr(
-            fd,
-            termios.TCSADRAIN,
-            old,
-        )
+      termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
-
-# ---------- TERMINAL ----------
-def clear():
-    sys.stdout.write("\x1b[2J\x1b[H")
-    sys.stdout.flush()
-
-
-def move_cursor(x, y):
-    sys.stdout.write(
-        f"\x1b[{y+1};{x+1}H"
-    )
+    return str(seq)
