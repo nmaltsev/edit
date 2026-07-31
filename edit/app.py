@@ -147,14 +147,14 @@ class EditorApplication:
             self.prev_key = key
             return True
 
-        if key in ("ALT+RIGHT", "CTRL+UP", "CTRL+LEFT", "CTRL+DOWN"):
+        if key in ("ALT+RIGHT", "ALT+UP", "ALT+LEFT", "ALT+DOWN"):
             if key == "ALT+RIGHT":
                 self.mode = MODE.TAB_BROWSER if self.mode == MODE.FILE_BROWSER else MODE.EDIT if self.mode == MODE.TAB_BROWSER else MODE.FILE_BROWSER
-            elif key == "CTRL+UP":
+            elif key == "ALT+UP":
                 self.mode = MODE.TAB_BROWSER
-            elif key == "CTRL+DOWN":
+            elif key == "ALT+DOWN":
                 self.mode = MODE.EDIT
-            elif key == "CTRL+LEFT":
+            elif key == "ALT+LEFT":
                 self.mode = MODE.FILE_BROWSER
 
             clear()

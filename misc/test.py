@@ -126,6 +126,11 @@ def read_sequence():
               return 'ALT+HOME'
             if code == 70:
               return 'ALT+END'
+          if seq == [27,91,49,59,53]:
+            if code == 72:
+              return 'CTRL+HOME'
+            if code == 70:
+              return 'CTRL+END'
           print(f"{code=} {c=}", file=sys.stderr)
           seq.append(code)
           c+=1

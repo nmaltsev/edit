@@ -1,17 +1,42 @@
 import os
 import shutil
+import locale
 
-def load_file(path:str):
-    if os.path.exists(path):
+encodings = (
+    "utf-8",
+    locale.getpreferredencoding(False),
+    "utf-8-sig",   # UTF-8 with BOM
+    "cp1252",      # Windows Western Europe
+    "latin-1",     # Never fails
+)
+
+def load_file(path: str):
+    """
+    Load a text file into a list of lines.
+
+    Tries several common encodings before giving up.
+    Returns [""] for missing or empty files.
+    """
+    if not os.path.exists(path):
+        return [""]
+  
+    last_exc = None
+
+    for encoding in encodings:
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, "r", encoding=encoding) as f:
                 lines = f.read().splitlines()
             return lines or [""]
+        except UnicodeDecodeError as exc:
+            last_exc = exc
+            continue
         except Exception as exc:
-            print(f"There is error while processing {path} {exc.__class__}")
-            raise exc
-    return [""]
+            print(f"There is error while processing {path}: {exc}")
+            raise
 
+    # Should never happen because latin-1 can decode any byte sequence,
+    # but keep this for completeness.
+    raise last_exc
 
 def save_file(path:str, doc_lines: list[str]):
     with open(path,"w",encoding="utf-8") as f:
