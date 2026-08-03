@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 from .editor_helpers import ( 
     delete_selection,
     replace_selection,
@@ -10,7 +9,7 @@ from .editor_helpers import (
     print_status,
 )
 from .clipboard import copy_to_clipboard, paste_from_clipboard
-
+from .state import _display_line, _display_to_doc_col, _doc_to_display_col
 
 @dataclass
 class EditorResult:
@@ -18,48 +17,6 @@ class EditorResult:
     real_x: int
     visual: list
     exit_editor: bool = False
-
-
-def _display_line(state, doc_y):
-    return state.document.doc_lines[doc_y].expandtabs(state.tab_size)
-
-
-def _display_to_doc_col(line, display_col, tab_size):
-    """
-    Convert visual column position to real document column.
-
-    Tabs occupy one character in the document but multiple
-    visual columns on screen.
-    """
-    visual = 0
-
-    for doc_col, ch in enumerate(line):
-        if ch == "\t":
-            next_visual = visual + (tab_size - (visual % tab_size))
-        else:
-            next_visual = visual + 1
-
-        if display_col < next_visual:
-            return doc_col
-
-        visual = next_visual
-
-    return len(line)
-
-
-def _doc_to_display_col(line, doc_col, tab_size):
-    """
-    Convert document column to visual column.
-    """
-    visual = 0
-
-    for ch in line[:doc_col]:
-        if ch == "\t":
-            visual += tab_size - (visual % tab_size)
-        else:
-            visual += 1
-
-    return visual
 
 
 def process_editor_keys(key, prev_key, state, selectionState):

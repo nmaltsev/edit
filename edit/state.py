@@ -63,6 +63,49 @@ class DocumentState:
         self.doc_lines.insert(insert_pos, parts[-1] + after)
         return insert_pos, len(parts[-1])
 
+def _display_line(state, doc_y):
+    return state.document.doc_lines[doc_y].expandtabs(state.tab_size)
+
+
+def _display_to_doc_col(line, display_col, tab_size):
+    """
+    Convert visual column position to real document column.
+
+    Tabs occupy one character in the document but multiple
+    visual columns on screen.
+    """
+    visual = 0
+
+    for doc_col, ch in enumerate(line):
+        if ch == "\t":
+            next_visual = visual + (tab_size - (visual % tab_size))
+        else:
+            next_visual = visual + 1
+
+        if display_col < next_visual:
+            return doc_col
+
+        visual = next_visual
+
+    return len(line)
+
+
+def _doc_to_display_col(line, doc_col, tab_size):
+    """
+    Convert document column to visual column.
+    """
+    visual = 0
+
+    for ch in line[:doc_col]:
+        if ch == "\t":
+            visual += tab_size - (visual % tab_size)
+        else:
+            visual += 1
+
+    return visual
+
+
+
 class EditorState:
     def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box=(1, 1, 50, 20)):
         self.use_tab = use_tab
@@ -79,15 +122,17 @@ class EditorState:
             return "\t"
         return " " * self.tab_size
 
+    def get_active_document(self):
+        if (self.active_tab_index > -1 and self.active_tab_index < len(self.open_tabs)):
+            return self.open_tabs[self.active_tab_index]
+        return None
+
     def save_active_tab_state(self):
         """
         No copying is required because EditorState.document references the
         active DocumentState instance stored in open_tabs.
         """
-        if self.active_tab_index < 0:
-            return
-
-        if self.active_tab_index >= len(self.open_tabs):
+        if self.active_tab_index < 0 or self.active_tab_index >= len(self.open_tabs):
             return
 
         self.open_tabs[self.active_tab_index] = self.document

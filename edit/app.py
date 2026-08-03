@@ -110,27 +110,20 @@ class EditorApplication:
         redraw_all(self.state, self.selectionState, self.browser)
         sys.stdout.flush()
 
-    def handle_refresh(self, key):
-        if key != "CTRL_R":
-            return False
 
-        # TODO the following code must be refactored
-        if self.state.active_tab_index < len(self.state.open_tabs):
-            tab = self.state.open_tabs[self.state.active_tab_index]
+    def handle_global_shortcuts(self, key):
+        if key == "CTRL_R":
+            tab = self.state.get_active_document()
             if tab is not None:
                 tab.doc_lines = load_file(tab.path) or [""]
                 self.state.document = tab
 
-        resize_layout(self.state, self.browser)
-        clear()
-        redraw_all(self.state, self.selectionState, self.browser)
+            resize_layout(self.state, self.browser)
+            clear()
+            redraw_all(self.state, self.selectionState, self.browser)
+            sys.stdout.flush()
+            return True
 
-        sys.stdout.flush()
-        self.prev_key = key
-
-        return True
-
-    def handle_global_shortcuts(self, key):
         if key == "CTRL_P" and (self.mode == MODE.EDIT or self.mode == MODE.LOG):
             self.mode = MODE.EDIT if self.mode == MODE.LOG else MODE.LOG
             clear()
@@ -144,7 +137,6 @@ class EditorApplication:
             else:
                 print("DEBUG MODE")
 
-            self.prev_key = key
             return True
 
         if key in ("ALT+RIGHT", "ALT+UP", "ALT+LEFT", "ALT+DOWN"):
@@ -159,7 +151,6 @@ class EditorApplication:
 
             clear()
             redraw_all(self.state, self.selectionState, self.browser)
-            self.prev_key = key
             return True
 
         return False
@@ -170,7 +161,8 @@ class EditorApplication:
         while True:
             key = read_sequence()
 
-            if self.handle_refresh(key) or self.handle_global_shortcuts(key):
+            if self.handle_global_shortcuts(key):
+                self.prev_key = key
                 continue
 
             if self.mode == MODE.LOG:
