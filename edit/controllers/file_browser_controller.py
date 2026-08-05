@@ -146,27 +146,33 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             return False, mode
 
         elif action == "FIND_BY_FNAME":
+            import random
             def find_files2(path, pattern):
-                # TODO generate an array of random numbers
-                n = len(patter) * 3
+                n = len(pattern) * 3
+                return [str(random.randint(0, 100000)) for _ in range(n)]
 
 
-            def onEnter(value, option):
-                move_cursor(0,10)
-                suggestion_len = 20
-                # TODO find_files here
-                for n in range(10):
-                    if n < len(value):
-                        line = '> ' if n == option else '  '
-                        line +=  f"{n}. {len(value)} {value} {option}"
+            def onEnter(value, position, offset):
+                move_cursor(0, 10)
 
-                        print(line[:suggestion_len].ljust(suggestion_len))
+                results = find_files2(path, value.strip())
+
+                output_height = 10
+
+                for line in range(output_height):
+                    index = offset + line
+
+                    if index < len(results):
+                        prefix = "> " if line == position else "  "
+                        print((prefix + f"{index}. {results[index]}")[:20].ljust(20))
                     else:
-                        print(' ' * suggestion_len)
-                # print('', flush=True)
-                print(f'{path=} {value.strip()}')
-                move_cursor(2 + len(value),1)
+                        print(" " * 20)
+
+                print(f"{path=} {value.strip()}")
+                move_cursor(2 + len(value), 1)
                 sys.stdout.flush()
+
+                return len(results)
                 
 
             pattern = prompt_text2("Enter file name pattern and press enter", onEnter)

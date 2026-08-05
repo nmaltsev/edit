@@ -124,6 +124,11 @@ def prompt_text2(message, cb):
     # TODO implement offset of the array
     offset = 0
 
+    output_height = 10
+
+    # cb() renders the suggestions and returns the number of results
+    result_count = cb(value, line, offset)
+
     while True:
         key = read_sequence()
 
@@ -135,15 +140,26 @@ def prompt_text2(message, cb):
             return None
 
         if key == "DOWN" or key == "UP":
-            #  TODO parametrise: max suggestions = 10, number of suggestions = len(value)
-            max = min(len(value), 10)
-            line += (1 if key == "DOWN" else -1)
-            if line < 0:
-                line = 0
-            elif line >= max:
-                line = max -2
-            else:
-                cb(value, line)
+            # TODO parametrise: max suggestions = 10, number of suggestions = len(value)
+
+            if result_count == 0:
+                continue
+
+            if key == "DOWN":
+                if offset + line < result_count - 1:
+                    if line < min(output_height - 1, result_count - offset - 1):
+                        line += 1
+                    else:
+                        offset += 1
+
+            else:  # UP
+                if offset + line > 0:
+                    if line > 0:
+                        line -= 1
+                    else:
+                        offset -= 1
+
+            result_count = cb(value, line, offset)
             continue
 
         if key == "BACKSPACE":
@@ -151,15 +167,16 @@ def prompt_text2(message, cb):
                 value = value[:-1]
                 print("\b \b", end="", flush=True)
                 line = 0
-                cb(value, line)
+                offset = 0
+                result_count = cb(value, line, offset)
             continue
 
         if len(key) == 1:
             value += key
             print(key, end="", flush=True)
             line = 0
-            cb(value, line)
-
+            offset = 0
+            result_count = cb(value, line, offset)
 
 def show_find_results(results):
     clear()
