@@ -113,6 +113,53 @@ def prompt_text(message):
             value += key
             print(key, end="", flush=True)
 
+def prompt_text2(message, cb):
+    clear()
+
+    print(message)
+    print("> ", end="", flush=True)
+
+    value = ""
+    line = 0
+    # TODO implement offset of the array
+    offset = 0
+
+    while True:
+        key = read_sequence()
+
+        if key == "ENTER":
+            print()
+            return value.strip()
+
+        if key == "DEL":
+            return None
+
+        if key == "DOWN" or key == "UP":
+            #  TODO parametrise: max suggestions = 10, number of suggestions = len(value)
+            max = min(len(value), 10)
+            line += (1 if key == "DOWN" else -1)
+            if line < 0:
+                line = 0
+            elif line >= max:
+                line = max -2
+            else:
+                cb(value, line)
+            continue
+
+        if key == "BACKSPACE":
+            if value:
+                value = value[:-1]
+                print("\b \b", end="", flush=True)
+                line = 0
+                cb(value, line)
+            continue
+
+        if len(key) == 1:
+            value += key
+            print(key, end="", flush=True)
+            line = 0
+            cb(value, line)
+
 
 def show_find_results(results):
     clear()

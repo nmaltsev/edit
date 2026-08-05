@@ -72,7 +72,7 @@ def find_files(root_path, pattern):
 
     pattern = pattern.lower()
 
-    for root, dirs, files in os.walk(root_path):
+    for root, dirs, files in os.walk(root_path, followlinks=True):
         for filename in files:
             if pattern in filename.lower():
                 results.append(os.path.join(root, filename))

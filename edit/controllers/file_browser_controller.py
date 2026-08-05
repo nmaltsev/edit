@@ -1,11 +1,12 @@
 import os
 import sys
 
-from ..utils.terminal import clear
+from ..utils.terminal import clear, move_cursor
 from ..utils.layout import (
     redraw_all,
     draw_status_line,
     prompt_text,
+    prompt_text2,
     show_find_results,
     confirm_delete,
     reset_editor,
@@ -145,7 +146,30 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             return False, mode
 
         elif action == "FIND_BY_FNAME":
-            pattern = prompt_text("Enter file name pattern and press enter")
+            def find_files2(path, pattern):
+                # TODO generate an array of random numbers
+                n = len(patter) * 3
+
+
+            def onEnter(value, option):
+                move_cursor(0,10)
+                suggestion_len = 20
+                # TODO find_files here
+                for n in range(10):
+                    if n < len(value):
+                        line = '> ' if n == option else '  '
+                        line +=  f"{n}. {len(value)} {value} {option}"
+
+                        print(line[:suggestion_len].ljust(suggestion_len))
+                    else:
+                        print(' ' * suggestion_len)
+                # print('', flush=True)
+                print(f'{path=} {value.strip()}')
+                move_cursor(2 + len(value),1)
+                sys.stdout.flush()
+                
+
+            pattern = prompt_text2("Enter file name pattern and press enter", onEnter)
 
             if pattern:
                 # TODO need to be rfactored

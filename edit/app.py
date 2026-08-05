@@ -52,9 +52,9 @@ class EditorApplication:
         self.browser = FileBrowserState(
             view_box=(
                 0,
-                1,
+                2,
                 browser_width,
-                editor_height,
+                editor_height - 0,
             )
         )
 

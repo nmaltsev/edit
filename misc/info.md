@@ -21,3 +21,8 @@
 27, 102 Ctrl F
 27, 6 Ctrl Alt F
 
+
+\033[0K Clear from cursor to end of line
+print("\033[1K", end="", flush=True) # \033[1K Clear from beginning of line to cursor
+print("\033[2K", end="", flush=True) # Clear the entire line
+	
