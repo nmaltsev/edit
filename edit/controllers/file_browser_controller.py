@@ -146,41 +146,38 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
             return False, mode
 
         elif action == "FIND_BY_FNAME":
-            import random
-            def find_files2(path, pattern):
-                n = len(pattern) * 3
-                return [str(random.randint(0, 100000)) for _ in range(n)]
-
-
-            def onEnter(value, position, offset):
+            def render_results(results, value, position, offset):
                 move_cursor(0, 10)
 
-                results = find_files2(path, value.strip())
-
                 output_height = 10
+                suggestion_len = 60
 
                 for line in range(output_height):
                     index = offset + line
 
                     if index < len(results):
                         prefix = "> " if line == position else "  "
-                        print((prefix + f"{index}. {results[index]}")[:20].ljust(20))
+                        print((prefix + f"{index}. {results[index]}")[:suggestion_len].ljust(suggestion_len))
                     else:
-                        print(" " * 20)
+                        print(" " * suggestion_len)
 
                 print(f"{path=} {value.strip()}")
                 move_cursor(2 + len(value), 1)
                 sys.stdout.flush()
 
-                return len(results)
-                
 
-            pattern = prompt_text2("Enter file name pattern and press enter", onEnter)
+            results = prompt_text2(
+                "Enter file name pattern and press enter",
+                lambda value: find_files(path, value.strip()),
+                render_results,
+            )
+            # -----------------------------------
+            show_find_results(results)
 
-            if pattern:
-                # TODO need to be rfactored
-                results = find_files(path, pattern)
-                show_find_results(results)
+            # if pattern:
+            #     # TODO need to be rfactored
+            #     results = find_files(path, pattern)
+            #     show_find_results(results)
             clear()
             redraw_all(state, selectionState, browser)
 

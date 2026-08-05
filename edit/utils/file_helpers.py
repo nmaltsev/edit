@@ -68,13 +68,25 @@ def extend_path(path: str, base_dir: str) -> str:
     return os.path.normpath(os.path.join(base_dir, path))
 
 def find_files(root_path, pattern):
+    """
+    Search for files whose relative path contains the given pattern.
+
+    Examples:
+        "file.py"        -> matches any file.py
+        "utils/file.py"  -> matches .../utils/file.py
+        "src/utils"      -> matches files under src/utils/
+    """
     results = []
 
-    pattern = pattern.lower()
+    pattern = pattern.strip().lower().replace("\\", "/")
 
     for root, dirs, files in os.walk(root_path, followlinks=True):
         for filename in files:
-            if pattern in filename.lower():
-                results.append(os.path.join(root, filename))
+            full_path = os.path.join(root, filename)
+            relative_path = os.path.relpath(full_path, root_path)
+            normalized_path = relative_path.replace(os.sep, "/").lower()
+
+            if pattern in normalized_path:
+                results.append(full_path)
 
     return results

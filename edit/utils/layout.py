@@ -113,7 +113,7 @@ def prompt_text(message):
             value += key
             print(key, end="", flush=True)
 
-def prompt_text2(message, cb):
+def prompt_text2(message, search_cb, render_cb):
     clear()
 
     print(message)
@@ -121,31 +121,36 @@ def prompt_text2(message, cb):
 
     value = ""
     line = 0
-    # TODO implement offset of the array
     offset = 0
 
     output_height = 10
 
-    # cb() renders the suggestions and returns the number of results
-    result_count = cb(value, line, offset)
+    # Initial search
+    results = search_cb(value)
+    result_count = len(results)
+    render_cb(results, value, line, offset)
 
     while True:
         key = read_sequence()
 
         if key == "ENTER":
             print()
+
+            index = offset + line
+            if result_count and index < result_count:
+                return results[index]
+
             return value.strip()
 
         if key == "DEL":
             return None
 
         if key == "DOWN" or key == "UP":
-            # TODO parametrise: max suggestions = 10, number of suggestions = len(value)
-
             if result_count == 0:
                 continue
 
             if key == "DOWN":
+                # Move down one result
                 if offset + line < result_count - 1:
                     if line < min(output_height - 1, result_count - offset - 1):
                         line += 1
@@ -153,31 +158,43 @@ def prompt_text2(message, cb):
                         offset += 1
 
             else:  # UP
+                # Move up one result
                 if offset + line > 0:
                     if line > 0:
                         line -= 1
                     else:
                         offset -= 1
 
-            result_count = cb(value, line, offset)
+            # Redraw only - do NOT search again
+            render_cb(results, value, line, offset)
             continue
 
         if key == "BACKSPACE":
             if value:
                 value = value[:-1]
                 print("\b \b", end="", flush=True)
+
                 line = 0
                 offset = 0
-                result_count = cb(value, line, offset)
+
+                # Search again because the pattern changed
+                results = search_cb(value)
+                result_count = len(results)
+                render_cb(results, value, line, offset)
             continue
 
         if len(key) == 1:
             value += key
             print(key, end="", flush=True)
+
             line = 0
             offset = 0
-            result_count = cb(value, line, offset)
 
+            # Search again because the pattern changed
+            results = search_cb(value)
+            result_count = len(results)
+            render_cb(results, value, line, offset)
+            
 def show_find_results(results):
     clear()
 
