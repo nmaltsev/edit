@@ -14,7 +14,7 @@ from ..utils.layout import (
 )
 from ..editor_helpers import print_status, initial_set
 from ..file_browser_helpers import draw_file_browser, process_file_browser_key
-from ..utils.file_helpers import rm_path, extend_path, find_files
+from ..utils.file_helpers import rm_path, extend_path, find_files, split_path
 
 
 def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser):
@@ -147,21 +147,22 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
         elif action == "FIND_BY_FNAME":
             def render_results(results, value, position, offset):
-                move_cursor(0, 10)
+                move_cursor(0, 3)
 
                 output_height = 10
-                suggestion_len = 60
+                suggestion_len = state.view_box[2]
 
                 for line in range(output_height):
                     index = offset + line
 
                     if index < len(results):
                         prefix = "> " if line == position else "  "
-                        print((prefix + f"{index}. {results[index]}")[:suggestion_len].ljust(suggestion_len))
+                        dir_path, file_name = split_path(results[index])
+                        print((prefix + f"{index}. {file_name} ({dir_path})")[:suggestion_len].ljust(suggestion_len))
                     else:
                         print(" " * suggestion_len)
 
-                print(f"{path=} {value.strip()}")
+                print(f"Found {len(results)} result(s) in {path}".ljust(suggestion_len))
                 move_cursor(2 + len(value), 1)
                 sys.stdout.flush()
 

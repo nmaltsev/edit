@@ -90,3 +90,6 @@ def find_files(root_path, pattern):
                 results.append(full_path)
 
     return results
+
+def split_path(path: str) -> tuple[str, str]:
+    return os.path.split(path)
