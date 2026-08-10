@@ -27,7 +27,7 @@ def read_sequence():
     c = 0
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
-    try:  
+    try:
       tty.setraw(fd)
       while True and c < 6:
           ch = sys.stdin.read(1)
@@ -47,24 +47,72 @@ def read_sequence():
           if c == 1 and (0 < code < 27) and seq[0] == 27:
             # Does not detect Ctrl+I
             return f"ALT+CTRL_{chr(code + 64)}"
-          
-          
-          arrow_name = litter_key(code) 
+
+          # -----------------------------------------------------------
+          # macOS Terminal:
+          #
+          # Option+Left  -> ESC b
+          # Option+Right -> ESC f
+          # -----------------------------------------------------------
+          if seq == [27]:
+            if code == ord('b'):
+              return 'ALT+LEFT'
+
+            if code == ord('f'):
+              return 'ALT+RIGHT'
+
+          arrow_name = litter_key(code)
+
           if arrow_name:
+
+            # ---------------------------------------------------------
+            # Normal arrow:
+            #
+            # ESC [ A
+            # ESC [ B
+            # ESC [ C
+            # ESC [ D
+            # ---------------------------------------------------------
             if seq == [27,91]:
               return arrow_name
+
+            # ---------------------------------------------------------
+            # ALT + arrow, ESC ESC [ A/B/C/D
+            # ---------------------------------------------------------
+            if seq == [27,27,91]:
+              return 'ALT+' + arrow_name
+
+            # ---------------------------------------------------------
+            # ALT + arrow, SS3 form:
+            #
+            # ESC O A
+            # ESC O B
+            # ESC O C
+            # ESC O D
+            #
+            # Some terminal configurations use this form.
+            # ---------------------------------------------------------
+            if seq == [27,79]:
+              return 'ALT+' + arrow_name
+
             if seq == [27,91,49,59,50]:
               return 'SHIFT+' + arrow_name
+
             if seq == [27,91,49,59,53]:
               return 'CTRL+' + arrow_name
+
             if seq == [27,91,49,59,51]:
               return 'ALT+' + arrow_name
+
             if seq == [27,91,49,59,52]:
               return 'SHIFT+ALT+' + arrow_name
+
             if seq == [27,91,49,59,54]:
               return 'CTRL+SHIFT+' + arrow_name
+
             if seq == [27,91,49,59,55]:
               return 'CTRL+ALT+' + arrow_name
+
             if seq == [27,91,49,59,56]:
               return 'CTRL+SHIFT+ALT+' + arrow_name
             

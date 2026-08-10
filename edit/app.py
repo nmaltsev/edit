@@ -139,14 +139,14 @@ class EditorApplication:
 
             return True
 
-        if key in ("ALT+RIGHT", "ALT+UP", "ALT+LEFT", "ALT+DOWN"):
+        if key in ("CTRL_J", "CTRL_K", "ALT+RIGHT", "CTRL_L"):
             if key == "ALT+RIGHT":
                 self.mode = MODE.TAB_BROWSER if self.mode == MODE.FILE_BROWSER else MODE.EDIT if self.mode == MODE.TAB_BROWSER else MODE.FILE_BROWSER
-            elif key == "ALT+UP":
+            elif key == "CTRL_J":
                 self.mode = MODE.TAB_BROWSER
-            elif key == "ALT+DOWN":
+            elif key == "CTRL_K":
                 self.mode = MODE.EDIT
-            elif key == "ALT+LEFT":
+            elif key == "CTRL_L":
                 self.mode = MODE.FILE_BROWSER
 
             clear()
