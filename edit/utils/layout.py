@@ -196,6 +196,7 @@ def prompt_text2(message, search_cb, render_cb):
             render_cb(results, value, line, offset)
             
 def show_find_results(results):
+    # TODO: deprecated
     clear()
 
     if not results:

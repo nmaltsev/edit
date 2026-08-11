@@ -67,6 +67,9 @@ def extend_path(path: str, base_dir: str) -> str:
     # Otherwise make it relative to base_dir
     return os.path.normpath(os.path.join(base_dir, path))
 
+# Directories that should never be traversed. 
+BLACKLISTED_DIRS = { "__pycache__", "node_modules" }
+
 def find_files(root_path, pattern):
     """
     Search for files whose relative path contains the given pattern.
@@ -75,12 +78,17 @@ def find_files(root_path, pattern):
         "file.py"        -> matches any file.py
         "utils/file.py"  -> matches .../utils/file.py
         "src/utils"      -> matches files under src/utils/
+
+    Hidden directories (starting with ".") are not traversed.
     """
     results = []
 
     pattern = pattern.strip().lower().replace("\\", "/")
 
     for root, dirs, files in os.walk(root_path, followlinks=True):
+        # Prevent os.walk from descending into hidden directories.
+        dirs[:] = [directory for directory in dirs if not directory.startswith(".") and directory not in BLACKLISTED_DIRS]
+
         for filename in files:
             full_path = os.path.join(root, filename)
             relative_path = os.path.relpath(full_path, root_path)

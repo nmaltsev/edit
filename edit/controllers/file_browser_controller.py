@@ -151,6 +151,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
                 output_height = 10
                 suggestion_len = state.view_box[2]
+                print(f"Found {len(results)} result(s) in {path}:".ljust(suggestion_len))
 
                 for line in range(output_height):
                     index = offset + line
@@ -162,49 +163,51 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
                     else:
                         print(" " * suggestion_len)
 
-                print(f"Found {len(results)} result(s) in {path}".ljust(suggestion_len))
+                
                 move_cursor(2 + len(value), 1)
                 sys.stdout.flush()
 
 
-            results = prompt_text2(
+            promted_path = extend_path(prompt_text2(
                 "Enter file name pattern and press enter",
                 lambda value: find_files(path, value.strip()),
                 render_results,
-            )
-            # -----------------------------------
-            show_find_results(results)
-
-            # if pattern:
-            #     # TODO need to be rfactored
-            #     results = find_files(path, pattern)
-            #     show_find_results(results)
-            clear()
-            redraw_all(state, selectionState, browser)
-
-            return False, mode
-        elif action == "OPEN":
-            promoted_path = extend_path(prompt_text("Enter the path and press enter").strip(), path)
-
-            if promoted_path:
-                if os.path.isdir(promoted_path):
-                    browser.current_path = promoted_path
+            ), path)
+            # print(f'{promted_path=} {path=}')
+            # import time
+            # time.sleep(5)
+            
+            if promted_path:
+                if os.path.isdir(promted_path):
+                    browser.current_path = promted_path
                     browser.selected_index = 0
                     browser.scroll_offset = 0
                     browser.refresh()
-                elif os.path.exists(promoted_path):
-                    open_editor_file(state, selectionState, promoted_path)
+                elif os.path.exists(promted_path):
+                    open_editor_file(state, selectionState, promted_path)
                     mode = type(mode).EDIT
-                    # TODO test if this code is necessery
-                    # redraw_all(state, selectionState, browser)
-                    # sys.stdout.flush()
-                    # print(end='')
-                    # return False, mode
-                
+
             clear()
             redraw_all(state, selectionState, browser)
 
             return False, mode
+        # elif action == "OPEN":
+        #     promoted_path = extend_path(prompt_text("Enter the path and press enter").strip(), path)
+
+        #     if promoted_path:
+        #         if os.path.isdir(promoted_path):
+        #             browser.current_path = promoted_path
+        #             browser.selected_index = 0
+        #             browser.scroll_offset = 0
+        #             browser.refresh()
+        #         elif os.path.exists(promoted_path):
+        #             open_editor_file(state, selectionState, promoted_path)
+        #             mode = type(mode).EDIT
+                
+        #     clear()
+        #     redraw_all(state, selectionState, browser)
+
+        #     return False, mode
 
     draw_status_line(state, browser)
     draw_file_browser(browser)
