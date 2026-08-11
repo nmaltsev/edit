@@ -167,17 +167,17 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
                 move_cursor(2 + len(value), 1)
                 sys.stdout.flush()
 
-
-            promted_path = extend_path(prompt_text2(
+            promted_path = prompt_text2(
                 "Enter file name pattern and press enter",
                 lambda value: find_files(path, value.strip()),
                 render_results,
-            ), path)
+            )
             # print(f'{promted_path=} {path=}')
             # import time
             # time.sleep(5)
             
             if promted_path:
+                promted_path = extend_path(promted_path, path)
                 if os.path.isdir(promted_path):
                     browser.current_path = promted_path
                     browser.selected_index = 0
