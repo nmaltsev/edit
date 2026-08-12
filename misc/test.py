@@ -48,6 +48,12 @@ def read_sequence():
             # Does not detect Ctrl+I
             return f"ALT+CTRL_{chr(code + 64)}"
 
+          if True:
+            print(f"{code=} {c=}", file=sys.stderr)
+            seq.append(code)
+            c+=1
+            continue
+
           # -----------------------------------------------------------
           # macOS Terminal:
           #
