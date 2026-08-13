@@ -4,12 +4,13 @@ from typing import Optional
 Position = tuple[int, int]
 
 class DocumentState:
-    def __init__(self, path=None, doc_lines=None):
+    def __init__(self, path=None, doc_lines=None, is_viewer=False):
         self.path = path
         self.doc_lines = doc_lines or [""]
         self.cursor_offset = [0, 0]
         self.view_offset = 0
         self.modified = False
+        self.is_viewer = is_viewer
 
     def get_selected_text(self, r:Optional[tuple[Position, Position]]) -> str:
         if not r:

@@ -1,3 +1,4 @@
+# ./edit/controllers/edit_controller.py
 import sys, os
 from ..utils.terminal import clear
 from ..utils.layout import draw_status_line, redraw_all, prompt_text, reset_editor, draw_tab_panel
@@ -31,6 +32,8 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
 
                 sys.stdout.flush()
 
+                if state.document.is_viewer:
+                    return type(mode).VIEW, modal_payload
                 return mode, modal_payload
 
         reset_editor(

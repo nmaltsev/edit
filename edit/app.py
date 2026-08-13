@@ -1,3 +1,4 @@
+# ./edit/app.py
 import os
 import sys
 from enum import Enum
@@ -15,7 +16,8 @@ from .controllers.edit_controller import handle_edit_mode
 from .controllers.file_browser_controller import handle_file_browser_mode
 from .controllers.modal_controller import handle_modal_mode
 from .controllers.log_controller import handle_log_mode
-from .utils.layout import open_editor_file
+from .controllers.view_controller import handle_view_mode
+from .utils.layout import open_editor_file, is_markdown_path
 
 
 class MODE(Enum):
@@ -25,6 +27,7 @@ class MODE(Enum):
     FILE_BROWSER = 3
     TAB_BROWSER = 4
     TERM = 5
+    VIEW = 6
 
 
 class EditorApplication:
@@ -90,7 +93,7 @@ class EditorApplication:
             elif os.path.exists(path):
                 # Existing file.
                 open_editor_file(self.state, self.selectionState, path)
-                self.mode = MODE.EDIT
+                self.mode = MODE.VIEW if is_markdown_path(path) else MODE.EDIT
 
             else:
                 # New file:
@@ -124,11 +127,15 @@ class EditorApplication:
             sys.stdout.flush()
             return True
 
-        if key == "CTRL_P" and (self.mode == MODE.EDIT or self.mode == MODE.LOG):
-            self.mode = MODE.EDIT if self.mode == MODE.LOG else MODE.LOG
+        if key == "CTRL_P" and (self.mode == MODE.EDIT or self.mode == MODE.VIEW or self.mode == MODE.LOG):
+            if self.mode == MODE.LOG:
+                doc = self.state.get_active_document()
+                self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+            else:
+                self.mode = MODE.LOG
             clear()
 
-            if self.mode == MODE.EDIT:
+            if self.mode in (MODE.EDIT, MODE.VIEW):
                 draw_status_line(self.state, self.browser)
                 initial_set(self.state, self.selectionState)
                 draw_file_browser(self.browser)
@@ -141,11 +148,18 @@ class EditorApplication:
 
         if key in ("CTRL_J", "CTRL_K", "ALT+RIGHT", "CTRL_L"):
             if key == "ALT+RIGHT":
-                self.mode = MODE.TAB_BROWSER if self.mode == MODE.FILE_BROWSER else MODE.EDIT if self.mode == MODE.TAB_BROWSER else MODE.FILE_BROWSER
+                if self.mode == MODE.FILE_BROWSER:
+                    self.mode = MODE.TAB_BROWSER
+                elif self.mode == MODE.TAB_BROWSER:
+                    doc = self.state.get_active_document()
+                    self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                else:
+                    self.mode = MODE.FILE_BROWSER
             elif key == "CTRL_J":
                 self.mode = MODE.TAB_BROWSER
             elif key == "CTRL_K":
-                self.mode = MODE.EDIT
+                doc = self.state.get_active_document()
+                self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
             elif key == "CTRL_L":
                 self.mode = MODE.FILE_BROWSER
 
@@ -220,7 +234,8 @@ class EditorApplication:
                         self.state.tab_selected_index,
                     )
                     initial_set(self.state, self.selectionState)
-                    self.mode = MODE.EDIT
+                    doc = self.state.get_active_document()
+                    self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
 
                 draw_tab_panel(self.state)
                 sys.stdout.flush()
@@ -230,6 +245,19 @@ class EditorApplication:
 
             if self.mode == MODE.EDIT:
                 self.mode, self.modal_payload = handle_edit_mode(
+                    key,
+                    self.mode,
+                    self.modal_payload,
+                    self.state,
+                    self.selectionState,
+                    self.browser,
+                )
+
+                self.prev_key = key
+                continue
+
+            if self.mode == MODE.VIEW:
+                self.mode, self.modal_payload = handle_view_mode(
                     key,
                     self.mode,
                     self.modal_payload,

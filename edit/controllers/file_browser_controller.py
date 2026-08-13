@@ -1,3 +1,4 @@
+# ./edit/controllers/file_browser_controller.py
 import os
 import sys
 
@@ -11,6 +12,7 @@ from ..utils.layout import (
     confirm_delete,
     reset_editor,
     open_editor_file,
+    is_markdown_path,
 )
 from ..editor_helpers import print_status, initial_set
 from ..file_browser_helpers import draw_file_browser, process_file_browser_key
@@ -58,7 +60,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
         if action == "OPEN_FILE":
             open_editor_file(state, selectionState, path)
 
-            mode = type(mode).EDIT
+            mode = type(mode).VIEW if is_markdown_path(path) else type(mode).EDIT
             redraw_all(state, selectionState, browser)
             sys.stdout.flush()
             print(end='')
@@ -185,7 +187,7 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
                     browser.refresh()
                 elif os.path.exists(promted_path):
                     open_editor_file(state, selectionState, promted_path)
-                    mode = type(mode).EDIT
+                    mode = type(mode).VIEW if is_markdown_path(promted_path) else type(mode).EDIT
 
             clear()
             redraw_all(state, selectionState, browser)

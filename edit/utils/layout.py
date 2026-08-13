@@ -1,3 +1,4 @@
+# ./edit/utils/layout.py
 import os
 
 from edit import ENABLE_TABS
@@ -39,6 +40,8 @@ def draw_tab_panel(state):
 
     for index, document in enumerate(state.open_tabs):
         name = os.path.basename(document.path or "Untitled")
+        if document.is_viewer:
+            name = f"~{name}"
         is_active = index == state.active_tab_index
         is_selected = index == state.tab_selected_index
 
@@ -225,13 +228,24 @@ def reset_editor(state, selectionState):
     selectionState.clear_selection()
 
 
-def open_editor_file(state, selectionState, path):
+def is_markdown_path(path):
+    if not path:
+        return False
+    lower = path.lower()
+    return lower.endswith(".md") or lower.endswith(".markdown")
+
+
+def open_editor_file(state, selectionState, path, is_viewer=None):
     existing = state.findExistingTabByPath(path)
+
+    if is_viewer is None:
+        is_viewer = is_markdown_path(path)
 
     if existing is None:
         document = DocumentState(
             path=path,
             doc_lines=load_file(path) or [""],
+            is_viewer=is_viewer,
         )
 
         state.open_tabs.append(document)
