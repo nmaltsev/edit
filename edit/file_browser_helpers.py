@@ -66,6 +66,12 @@ def process_file_browser_key(key, browser, editor_state):
 
         elif os.path.isfile(path):
             return ("OPEN_FILE", path)
+    
+    elif key == "CTRL_O":
+        path = browser.current_full_path()
+
+        if os.path.isfile(path):
+            return ("VIEW_FILE", path)
 
     elif key == "DEL":
         return ("DELETE", browser.current_full_path())

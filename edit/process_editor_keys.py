@@ -39,7 +39,9 @@ def process_editor_keys(key, prev_key, state, selectionState):
     doc_x = _display_to_doc_col(line, display_x, state.tab_size)
     real_x = doc_x
 
-    shift_move = key in ("SHIFT+LEFT", "SHIFT+RIGHT", "SHIFT+UP", "SHIFT+DOWN", "SHIFT+PAGE_DOWN", "SHIFT+PAGE_UP", "SHIFT+HOME", "SHIFT+END", "HOME", "END", "PAGE_UP", "PAGE_DOWN")
+    # TODO investigate in MacOs 
+    # shift_move = key in ("SHIFT+LEFT", "SHIFT+RIGHT", "SHIFT+UP", "SHIFT+DOWN", "SHIFT+PAGE_DOWN", "SHIFT+PAGE_UP", "SHIFT+HOME", "SHIFT+END", "HOME", "END", "PAGE_UP", "PAGE_DOWN")
+    shift_move = key in ("SHIFT+LEFT", "SHIFT+RIGHT", "SHIFT+UP", "SHIFT+DOWN", "SHIFT+PAGE_DOWN", "SHIFT+PAGE_UP", "SHIFT+HOME", "SHIFT+END")
 
     # --------------------------------------------------
     # Selection begin/end

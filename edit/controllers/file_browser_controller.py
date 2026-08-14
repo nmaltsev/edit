@@ -59,13 +59,23 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
         if action == "OPEN_FILE":
             open_editor_file(state, selectionState, path)
-
-            mode = type(mode).VIEW if is_markdown_path(path) else type(mode).EDIT
+            mode = type(mode).EDIT
             redraw_all(state, selectionState, browser)
             sys.stdout.flush()
             print(end='')
 
             return False, mode
+
+        elif action == "VIEW_FILE":
+            open_editor_file(state, selectionState, path, True)
+            # mode = type(mode).VIEW if is_markdown_path(path) else type(mode).EDIT
+            mode = type(mode).VIEW
+            redraw_all(state, selectionState, browser)
+            sys.stdout.flush()
+            print(end='')
+
+            return False, mode
+
 
         elif action == "DELETE":
             if confirm_delete(path):

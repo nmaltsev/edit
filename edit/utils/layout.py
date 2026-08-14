@@ -238,8 +238,8 @@ def is_markdown_path(path):
 def open_editor_file(state, selectionState, path, is_viewer=None):
     existing = state.findExistingTabByPath(path)
 
-    if is_viewer is None:
-        is_viewer = is_markdown_path(path)
+    # if is_viewer is None:
+    #     is_viewer = is_markdown_path(path)
 
     if existing is None:
         document = DocumentState(
