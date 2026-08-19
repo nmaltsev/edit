@@ -283,3 +283,9 @@ class FileBrowserState:
             return os.path.dirname(self.current_path)
 
         return os.path.join(self.current_path, item)
+
+    def navigate(self, path):
+        self.current_path = path
+        self.selected_index = 0
+        self.scroll_offset = 0
+        self.refresh()

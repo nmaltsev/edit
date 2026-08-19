@@ -1,5 +1,5 @@
-# ./edit/utils/layout.py
 import os
+import sys
 
 from edit import ENABLE_TABS
 from edit.utils.kbd import read_sequence
@@ -116,22 +116,27 @@ def prompt_text(message):
             value += key
             print(key, end="", flush=True)
 
-def prompt_text2(message, search_cb, render_cb):
+# TODO find a proper name for the widget
+def prompt_text2(message, view_box, search_cb, render_cb):
     clear()
 
     print(message)
     print("> ", end="", flush=True)
 
-    value = ""
+    inputed_text = ""
     line = 0
     offset = 0
-
-    output_height = 10
+    n_rows = 10
+    width = view_box[2]
 
     # Initial search
-    results = search_cb(value)
+    results = [] # search_cb(inputed_text)
     result_count = len(results)
-    render_cb(results, value, line, offset)
+
+    move_cursor(0, 3)
+    render_cb(results, inputed_text, line, offset, width, n_rows)
+    move_cursor(2 + len(inputed_text), 1)
+    sys.stdout.flush()
 
     while True:
         key = read_sequence()
@@ -143,7 +148,7 @@ def prompt_text2(message, search_cb, render_cb):
             if result_count and index < result_count:
                 return results[index]
 
-            return value.strip()
+            return inputed_text.strip()
 
         if key == "DEL":
             return None
@@ -155,7 +160,7 @@ def prompt_text2(message, search_cb, render_cb):
             if key == "DOWN":
                 # Move down one result
                 if offset + line < result_count - 1:
-                    if line < min(output_height - 1, result_count - offset - 1):
+                    if line < min(n_rows - 1, result_count - offset - 1):
                         line += 1
                     else:
                         offset += 1
@@ -169,34 +174,43 @@ def prompt_text2(message, search_cb, render_cb):
                         offset -= 1
 
             # Redraw only - do NOT search again
-            render_cb(results, value, line, offset)
+            move_cursor(0, 3)
+            render_cb(results, inputed_text, line, offset, width, n_rows)
+            move_cursor(2 + len(inputed_text), 1)
+            sys.stdout.flush()
             continue
 
         if key == "BACKSPACE":
-            if value:
-                value = value[:-1]
+            if inputed_text:
+                inputed_text = inputed_text[:-1]
                 print("\b \b", end="", flush=True)
 
                 line = 0
                 offset = 0
 
                 # Search again because the pattern changed
-                results = search_cb(value)
+                results = search_cb(inputed_text)
                 result_count = len(results)
-                render_cb(results, value, line, offset)
+                move_cursor(0, 3)
+                render_cb(results, inputed_text, line, offset, width, n_rows)
+                move_cursor(2 + len(inputed_text), 1)
+                sys.stdout.flush()
             continue
 
         if len(key) == 1:
-            value += key
+            inputed_text += key
             print(key, end="", flush=True)
 
             line = 0
             offset = 0
 
             # Search again because the pattern changed
-            results = search_cb(value)
+            results = search_cb(inputed_text)
             result_count = len(results)
-            render_cb(results, value, line, offset)
+            move_cursor(0, 3)
+            render_cb(results, inputed_text, line, offset, width, n_rows)
+            move_cursor(2 + len(inputed_text), 1)
+            sys.stdout.flush()
             
 def show_find_results(results):
     # TODO: deprecated

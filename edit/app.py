@@ -5,11 +5,11 @@ from enum import Enum
 
 from .utils.kbd import read_sequence
 from .utils.terminal import clear
-from .utils.layout import draw_status_line, redraw_all, resize_layout
+from .utils.layout import draw_status_line, redraw_all, resize_layout, prompt_text2
 from .state import EditorState, SelectionState, FileBrowserState, DocumentState
 from .editor_helpers import initial_set, print_status
 from .utils.layout import reset_editor
-from .utils.file_helpers import load_file
+from .utils.file_helpers import load_file, extend_path, find_files
 from .file_browser_helpers import draw_file_browser
 from .process_editor_keys import process_editor_keys
 from .controllers.edit_controller import handle_edit_mode
@@ -17,7 +17,8 @@ from .controllers.file_browser_controller import handle_file_browser_mode
 from .controllers.modal_controller import handle_modal_mode
 from .controllers.log_controller import handle_log_mode
 from .controllers.view_controller import handle_view_mode
-from .utils.layout import open_editor_file, is_markdown_path
+from .utils.layout import open_editor_file, is_markdown_path, open_editor_file
+from .utils.file_search_helpers import get_result_render
 
 
 class MODE(Enum):
@@ -127,24 +128,48 @@ class EditorApplication:
             sys.stdout.flush()
             return True
 
-        if key == "CTRL_P" and (self.mode == MODE.EDIT or self.mode == MODE.VIEW or self.mode == MODE.LOG):
-            if self.mode == MODE.LOG:
-                doc = self.state.get_active_document()
-                self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
-            else:
-                self.mode = MODE.LOG
+        if key == "CTRL_P":
+            promted_path = prompt_text2(
+                "Enter file name pattern and press enter",
+                (None,None,self.state.view_box[2],None),
+                lambda value: find_files(self.browser.current_path, value.strip()),
+                get_result_render(self.browser.current_path),
+            )
+            if promted_path:
+                promted_path = extend_path(promted_path, self.browser.current_path)
+                if os.path.isdir(promted_path):
+                    self.browser.navigate(promted_path)
+                    self.mode = type(self.mode).FILE_BROWSER
+                elif os.path.exists(promted_path):
+                    open_editor_file(self.state, self.selectionState, promted_path)
+                    self.mode = type(self.mode).VIEW if is_markdown_path(promted_path) else type(self.mode).EDIT
+
             clear()
-
-            if self.mode in (MODE.EDIT, MODE.VIEW):
-                draw_status_line(self.state, self.browser)
-                initial_set(self.state, self.selectionState)
-                draw_file_browser(self.browser)
-                print(end="")
-                sys.stdout.flush()
-            else:
-                print("DEBUG MODE")
-
+            redraw_all(self.state, self.selectionState, self.browser)
             return True
+            
+        # Temporary disabled
+        # if key == "CTRL_P" and (self.mode == MODE.EDIT or self.mode == MODE.VIEW or self.mode == MODE.LOG):
+        #     if self.mode == MODE.LOG:
+        #         doc = self.state.get_active_document()
+        #         self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+        #     else:
+        #         self.mode = MODE.LOG
+        #     clear()
+
+        #     if self.mode in (MODE.EDIT, MODE.VIEW):
+        #         draw_status_line(self.state, self.browser)
+        #         initial_set(self.state, self.selectionState)
+        #         draw_file_browser(self.browser)
+        #         print(end="")
+        #         sys.stdout.flush()
+        #     else:
+        #         print("DEBUG MODE")
+
+        #     return True
+        if key == "CTRL_F":
+            # TODO
+            pass
 
         if key in ("CTRL_J", "CTRL_K", "ALT+RIGHT", "CTRL_L"):
             if key == "ALT+RIGHT":

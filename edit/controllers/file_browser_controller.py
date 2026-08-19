@@ -157,52 +157,52 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
 
             return False, mode
 
-        elif action == "FIND_BY_FNAME":
-            def render_results(results, value, position, offset):
-                move_cursor(0, 3)
+        # elif action == "FIND_BY_FNAME":
+        #     def render_results(results, value, position, offset):
+        #         move_cursor(0, 3)
 
-                output_height = 10
-                suggestion_len = state.view_box[2]
-                print(f"Found {len(results)} result(s) in {path}:".ljust(suggestion_len))
+        #         output_height = 10
+        #         suggestion_len = state.view_box[2]
+        #         print(f"Found {len(results)} result(s) in {path}:".ljust(suggestion_len))
 
-                for line in range(output_height):
-                    index = offset + line
+        #         for line in range(output_height):
+        #             index = offset + line
 
-                    if index < len(results):
-                        prefix = "> " if line == position else "  "
-                        dir_path, file_name = split_path(results[index])
-                        print((prefix + f"{index}. {file_name} ({dir_path})")[:suggestion_len].ljust(suggestion_len))
-                    else:
-                        print(" " * suggestion_len)
+        #             if index < len(results):
+        #                 prefix = "> " if line == position else "  "
+        #                 dir_path, file_name = split_path(results[index])
+        #                 print((prefix + f"{index}. {file_name} ({dir_path})")[:suggestion_len].ljust(suggestion_len))
+        #             else:
+        #                 print(" " * suggestion_len)
 
                 
-                move_cursor(2 + len(value), 1)
-                sys.stdout.flush()
+        #         move_cursor(2 + len(value), 1)
+        #         sys.stdout.flush()
 
-            promted_path = prompt_text2(
-                "Enter file name pattern and press enter",
-                lambda value: find_files(path, value.strip()),
-                render_results,
-            )
-            # print(f'{promted_path=} {path=}')
-            # import time
-            # time.sleep(5)
+        #     promted_path = prompt_text2(
+        #         "Enter file name pattern and press enter",
+        #         lambda value: find_files(path, value.strip()),
+        #         render_results,
+        #     )
+        #     # print(f'{promted_path=} {path=}')
+        #     # import time
+        #     # time.sleep(5)
             
-            if promted_path:
-                promted_path = extend_path(promted_path, path)
-                if os.path.isdir(promted_path):
-                    browser.current_path = promted_path
-                    browser.selected_index = 0
-                    browser.scroll_offset = 0
-                    browser.refresh()
-                elif os.path.exists(promted_path):
-                    open_editor_file(state, selectionState, promted_path)
-                    mode = type(mode).VIEW if is_markdown_path(promted_path) else type(mode).EDIT
+        #     if promted_path:
+        #         promted_path = extend_path(promted_path, path)
+        #         if os.path.isdir(promted_path):
+        #             browser.current_path = promted_path
+        #             browser.selected_index = 0
+        #             browser.scroll_offset = 0
+        #             browser.refresh()
+        #         elif os.path.exists(promted_path):
+        #             open_editor_file(state, selectionState, promted_path)
+        #             mode = type(mode).VIEW if is_markdown_path(promted_path) else type(mode).EDIT
 
-            clear()
-            redraw_all(state, selectionState, browser)
+        #     clear()
+        #     redraw_all(state, selectionState, browser)
 
-            return False, mode
+        #     return False, mode
         # elif action == "OPEN":
         #     promoted_path = extend_path(prompt_text("Enter the path and press enter").strip(), path)
 

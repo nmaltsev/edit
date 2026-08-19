@@ -85,8 +85,8 @@ def process_file_browser_key(key, browser, editor_state):
     elif key == "CTRL_E":
         return ("RENAME", browser.current_full_path())
 
-    elif key == "CTRL_P":
-        return ("FIND_BY_FNAME", browser.current_path)
+    # elif key == "CTRL_P":
+    #     return ("FIND_BY_FNAME", browser.current_path)
     # elif key == "CTRL_O":
     #     return ("OPEN", browser.current_path)
 
