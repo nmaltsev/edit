@@ -85,12 +85,14 @@ def handle_file_browser_mode(key, prev_key, mode, state, selectionState, browser
                     clear()
                     redraw_all(state, selectionState, browser)
                     print_status(state, str(ex))
+                    sys.stdout.flush()
 
                     return False, mode
 
             browser.refresh()
             clear()
             redraw_all(state, selectionState, browser)
+            sys.stdout.flush()
 
             return False, mode
 
