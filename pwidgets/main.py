@@ -1,4 +1,6 @@
 from pwidgets.components.multiline_select import MultilineSelect
+from pwidgets.components.controller import Controller
+#from pwidgets.components import Controller, MultilineSelect
 from pwidgets.utils.terminal import clear, move_cursor
 from pwidgets.data_providers.directory import Directory
 
