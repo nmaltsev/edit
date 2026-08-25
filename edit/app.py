@@ -34,7 +34,10 @@ class MODE(Enum):
 class EditorApplication:
 
     def __init__(self, use_tab: bool = False, tab_size: int = 2):
-        size = os.get_terminal_size()
+        # TODO refactor: define relative and absolute layouts
+        # TODO unify with def resize_layout (layout.py)
+        # TODO define a function that will compute the view ports of all widgets from os.get_terminal_size()
+        size = os.get_terminal_size() # a1
         status_line_width = 1
         browser_width = 30
         editor_width = max(1, size.columns - browser_width - status_line_width)
@@ -93,9 +96,9 @@ class EditorApplication:
 
             elif os.path.exists(path):
                 # Existing file.
-                open_editor_file(self.state, self.selectionState, path)
-                self.mode = MODE.VIEW if is_markdown_path(path) else MODE.EDIT
-
+                open_editor_file(self.state, self.selectionState, path, is_markdown_path(path))
+                # self.mode = MODE.VIEW if is_markdown_path(path) else MODE.EDIT
+                self.mode = MODE.EDIT
             else:
                 # New file:
                 if not os.path.isabs(path):
@@ -141,8 +144,11 @@ class EditorApplication:
                     self.browser.navigate(promted_path)
                     self.mode = type(self.mode).FILE_BROWSER
                 elif os.path.exists(promted_path):
-                    open_editor_file(self.state, self.selectionState, promted_path)
-                    self.mode = type(self.mode).VIEW if is_markdown_path(promted_path) else type(self.mode).EDIT
+                    read_only = False # is_markdown_path(promted_path)
+                    open_editor_file(self.state, self.selectionState, promted_path, read_only)
+                    # TODO decide when to open in RO mode or not
+                    # self.mode = type(self.mode).VIEW if is_markdown_path(promted_path) else type(self.mode).EDIT
+                    self.mode = type(self.mode).EDIT
 
             clear()
             redraw_all(self.state, self.selectionState, self.browser)
@@ -177,14 +183,16 @@ class EditorApplication:
                     self.mode = MODE.TAB_BROWSER
                 elif self.mode == MODE.TAB_BROWSER:
                     doc = self.state.get_active_document()
-                    self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                    # self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                    self.mode = MODE.EDIT
                 else:
                     self.mode = MODE.FILE_BROWSER
             elif key == "CTRL_J":
                 self.mode = MODE.TAB_BROWSER
             elif key == "CTRL_K":
                 doc = self.state.get_active_document()
-                self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                # self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                self.mode = MODE.EDIT
             elif key == "CTRL_L":
                 self.mode = MODE.FILE_BROWSER
 
@@ -260,7 +268,8 @@ class EditorApplication:
                     )
                     initial_set(self.state, self.selectionState)
                     doc = self.state.get_active_document()
-                    self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                    # self.mode = MODE.VIEW if doc and doc.is_viewer else MODE.EDIT
+                    self.mode = MODE.EDIT
 
                 draw_tab_panel(self.state)
                 sys.stdout.flush()
@@ -269,20 +278,8 @@ class EditorApplication:
                 continue
 
             if self.mode == MODE.EDIT:
-                self.mode, self.modal_payload = handle_edit_mode(
-                    key,
-                    self.mode,
-                    self.modal_payload,
-                    self.state,
-                    self.selectionState,
-                    self.browser,
-                )
-
-                self.prev_key = key
-                continue
-
-            if self.mode == MODE.VIEW:
-                self.mode, self.modal_payload = handle_view_mode(
+                handler = handle_view_mode if self.state.document.is_viewer else handle_edit_mode
+                self.mode, self.modal_payload = handler(
                     key,
                     self.mode,
                     self.modal_payload,

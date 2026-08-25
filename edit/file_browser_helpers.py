@@ -4,11 +4,14 @@ from .utils.terminal import move_cursor
 from .utils.ui import trim_name
 from .utils.text import fill
 from .utils.file_helpers import load_file
+# import time
 
 
 def draw_file_browser(browser):
     x, y, w, h = browser.view_box
     visible = browser.items[browser.scroll_offset:browser.scroll_offset + h]
+    # print(f"{browser.view_box=}")
+    # time.sleep(5)
 
     for row in range(h):
         move_cursor(x, y + row)

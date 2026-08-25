@@ -39,9 +39,9 @@ def draw_tab_panel(state):
     parts = []
 
     for index, document in enumerate(state.open_tabs):
-        name = os.path.basename(document.path or "Untitled")
+        name = os.path.basename(document.path) if document.path is not None else "Untitled"
         if document.is_viewer:
-            name = f"~{name}"
+            name = f"~{name} RO"
         is_active = index == state.active_tab_index
         is_selected = index == state.tab_selected_index
 
@@ -69,9 +69,16 @@ def redraw_all(state, selectionState, browser):
     if state.document.path:
         initial_set(state, selectionState)
 
+def compute_layouts():
+    screen_geometry = os.get_terminal_size()
+    # TODO
+    browser_view_box = ()
+    editor_view_box = ()
+    tabs_view_box = ()
+    return (editor_view_box, browser_view_box, tabs_view_box)
 
 def resize_layout(state, browser):
-    size = os.get_terminal_size()
+    size = os.get_terminal_size() #a1
 
     browser_width = 30
     status_line_width = 1
@@ -82,7 +89,7 @@ def resize_layout(state, browser):
 
     state.tab_box = (browser_width + status_line_width, 1, editor_width, tabs_height)
     state.view_box = (browser_width + status_line_width, 1 + tabs_height, editor_width, editor_height)
-    browser.view_box = (0, 1, browser_width, size.lines - 1)
+    browser.view_box = (0, 2, browser_width, size.lines - 2)
 
     browser.refresh()
 
