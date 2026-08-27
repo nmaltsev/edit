@@ -69,27 +69,19 @@ def redraw_all(state, selectionState, browser):
     if state.document.path:
         initial_set(state, selectionState)
 
-def compute_layouts():
-    screen_geometry = os.get_terminal_size()
-    # TODO
-    browser_view_box = ()
-    editor_view_box = ()
-    tabs_view_box = ()
-    return (editor_view_box, browser_view_box, tabs_view_box)
 
 def resize_layout(state, browser):
-    size = os.get_terminal_size() #a1
+    # size = os.get_terminal_size() #a1
 
-    browser_width = 30
-    status_line_width = 1
-    tabs_height = 2 if ENABLE_TABS else 0
+    # browser_width = 30
+    # status_line_width = 1
+    # tabs_height = 2 if ENABLE_TABS else 0
 
-    editor_width = max(1, size.columns - browser_width - status_line_width)
-    editor_height = max(1, size.lines - 2 - tabs_height)
-
-    state.tab_box = (browser_width + status_line_width, 1, editor_width, tabs_height)
-    state.view_box = (browser_width + status_line_width, 1 + tabs_height, editor_width, editor_height)
-    browser.view_box = (0, 2, browser_width, size.lines - 2)
+    # editor_width = max(1, size.columns - browser_width - status_line_width)
+    # editor_height = max(1, size.lines - 2 - tabs_height)
+    state.tab_box.resize() # = (browser_width + status_line_width, 1, editor_width, tabs_height)
+    state.view_box.resize() # = (browser_width + status_line_width, 1 + tabs_height, editor_width, editor_height)
+    browser.view_box.resize() # = (0, 2, browser_width, size.lines - 2)
 
     browser.refresh()
 

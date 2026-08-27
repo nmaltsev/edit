@@ -70,7 +70,7 @@ def move_page(state, doc_y, real_x, direction):
 
     _, current_start, _ = visual[current_vis_idx]
     cx = real_x - current_start
-    target_vis_idx = current_vis_idx + (direction * state.view_box[3])
+    target_vis_idx = current_vis_idx + (direction * (state.view_box[3]))
 
     if target_vis_idx < 0:
         target_vis_idx = 0
@@ -90,7 +90,7 @@ def move_page(state, doc_y, real_x, direction):
 def fill_view_box(state, view_box, visual_lines, cursor=None):
     document = state.document
 
-    for i in range(view_box[3]):
+    for i in range(view_box[3]-1):
         move_cursor(view_box[0], view_box[1] + i)
         idx = document.view_offset + i
 

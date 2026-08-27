@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+from edit.states.view_box import ViewBox
 
 Position = tuple[int, int]
 
@@ -108,10 +109,10 @@ def _doc_to_display_col(line, doc_col, tab_size):
 
 
 class EditorState:
-    def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box=(1, 1, 50, 20)):
+    def __init__(self, use_tab: bool = False, tab_size: int = 2, view_box: ViewBox = None):
         self.use_tab = use_tab
         self.tab_size = tab_size
-        self.view_box = view_box  # (x,y,w,h) immutable
+        self.view_box = view_box
 
         self.document = DocumentState()
 

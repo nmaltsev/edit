@@ -19,6 +19,7 @@ from .controllers.log_controller import handle_log_mode
 from .controllers.view_controller import handle_view_mode
 from .utils.layout import open_editor_file, is_markdown_path, open_editor_file
 from .utils.file_search_helpers import get_result_render
+from edit.states.view_box import ViewBox
 
 
 class MODE(Enum):
@@ -34,56 +35,28 @@ class MODE(Enum):
 class EditorApplication:
 
     def __init__(self, use_tab: bool = False, tab_size: int = 2):
-        # TODO refactor: define relative and absolute layouts
-        # TODO unify with def resize_layout (layout.py)
-        # TODO define a function that will compute the view ports of all widgets from os.get_terminal_size()
-        size = os.get_terminal_size() # a1
         status_line_width = 1
         browser_width = 30
-        editor_width = max(1, size.columns - browser_width - status_line_width)
+        tabs_height = 2
 
-        # Reserve one terminal row for the editor status bar.
-        editor_height = max(1, size.lines - 2)
+        editor_view_box = ViewBox(browser_width + status_line_width, 1 + tabs_height, None, None)
+        browser_view_box = ViewBox(0, 2, browser_width, None)
+        tabs_view_box = ViewBox(browser_width + status_line_width, 1, None, tabs_height)
 
         self.state = EditorState(
             use_tab=use_tab,
             tab_size=tab_size,
-            view_box=(
-                browser_width + status_line_width,
-                1,
-                editor_width,
-                editor_height,
-            ),
+            view_box=editor_view_box
         )
 
-        self.browser = FileBrowserState(
-            view_box=(
-                0,
-                2,
-                browser_width,
-                editor_height - 0,
-            )
-        )
-
+        self.browser = FileBrowserState(view_box=browser_view_box)
         self.selectionState = SelectionState()
         self.mode = MODE.FILE_BROWSER
         self.prev_key = None
         self.modal_payload = None
-
-        tabs_height = 2
-        self.state.tab_box = (
-            browser_width + status_line_width,
-            1,
-            editor_width,
-            tabs_height,
-        )
+        self.state.tab_box = tabs_view_box
         self.state.tab_selected_index = 0
-        self.state.view_box = (
-            browser_width + status_line_width,
-            1 + tabs_height,
-            editor_width,
-            max(1, size.lines - 2 - tabs_height),
-        )
+
 
     def initialize(self):
         if len(sys.argv) > 1:

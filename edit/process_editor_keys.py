@@ -353,10 +353,10 @@ def process_editor_keys(key, prev_key, state, selectionState):
     if cy < 0:
         document.view_offset = new_vis_idx
         cy = 0
-
-    elif cy >= state.view_box[3]:
-        document.view_offset = new_vis_idx - state.view_box[3] + 1
-        cy = state.view_box[3] - 1
+    # TODO define the bottom offset equal to -1
+    elif cy >= state.view_box[3]-1: # Here -1 is a bottom offset
+        document.view_offset = new_vis_idx - (state.view_box[3]-1) + 1
+        cy = state.view_box[3]-1 - 1
 
     document.cursor_offset = [cx, cy]
     fill_view_box(state, state.view_box, visual, cursor=(cx, cy))

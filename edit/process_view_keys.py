@@ -229,9 +229,9 @@ def process_view_keys(key, prev_key, state, selectionState):
         document.view_offset = new_vis_idx
         cy = 0
 
-    elif cy >= state.view_box[3]:
-        document.view_offset = new_vis_idx - state.view_box[3] + 1
-        cy = state.view_box[3] - 1
+    elif cy >= state.view_box[3]-1: # -1 is a bottom odffset
+        document.view_offset = new_vis_idx - (state.view_box[3]-1) + 1
+        cy = state.view_box[3]-1 - 1
 
     document.cursor_offset = [cx, cy]
     fill_view_box(state, state.view_box, visual, cursor=(cx, cy))
