@@ -8,7 +8,6 @@ from ..utils.layout import (
     draw_status_line,
     prompt_text,
     prompt_text2,
-    show_find_results,
     confirm_delete,
     reset_editor,
     open_editor_file,

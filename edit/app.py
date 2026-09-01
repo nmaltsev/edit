@@ -14,7 +14,6 @@ from .file_browser_helpers import draw_file_browser
 from .process_editor_keys import process_editor_keys
 from .controllers.edit_controller import handle_edit_mode
 from .controllers.file_browser_controller import handle_file_browser_mode
-from .controllers.modal_controller import handle_modal_mode
 from .controllers.log_controller import handle_log_mode
 from .controllers.view_controller import handle_view_mode
 from .utils.layout import open_editor_file, is_markdown_path, open_editor_file
@@ -25,7 +24,7 @@ from edit.states.view_box import ViewBox
 class MODE(Enum):
     EDIT = 0
     LOG = 1
-    MODAL = 2
+    # MODAL = 2
     FILE_BROWSER = 3
     TAB_BROWSER = 4
     TERM = 5
@@ -187,22 +186,6 @@ class EditorApplication:
 
             if self.mode == MODE.LOG:
                 if handle_log_mode(key, self.prev_key):
-                    break
-
-                self.prev_key = key
-                continue
-
-            if self.mode == MODE.MODAL:
-                should_break, self.mode, self.modal_payload = handle_modal_mode(
-                    key,
-                    self.mode,
-                    self.modal_payload,
-                    self.state,
-                    self.selectionState,
-                    self.browser,
-                )
-
-                if should_break:
                     break
 
                 self.prev_key = key

@@ -66,52 +66,27 @@ def handle_edit_mode(key, mode, modal_payload, state, selectionState, browser):
 
         return mode, modal_payload
 
-    if key == "ALT+S":
-        # TODO probably does not work!
-        target = prompt_text(
-            "Save as file name"
-        )
+    if key == "ALT+CTRL_S":
+        target = extend_path(prompt_text("Save as file name"), browser.current_path)
 
         if target:
             try:
-                save_file(
-                    target,
-                    document.doc_lines,
-                )
-
+                save_file(target, document.doc_lines)
                 document.path = target
                 document.modified = False
-
             except Exception as ex:
                 clear()
-
-                redraw_all(
-                    state,
-                    selectionState,
-                    browser,
-                )
-
-                print_status(
-                    state,
-                    str(ex),
-                )
-
+                redraw_all(state, selectionState, browser)
+                print_status(state, str(ex))
                 return mode, modal_payload
-
+        browser.refresh()
         clear()
-
-        redraw_all(
-            state,
-            selectionState,
-            browser,
-        )
-
+        redraw_all(state, selectionState, browser)
         return mode, modal_payload
 
     if key == "CTRL_S":
         file_list_changed = False
         if (not document.path or document.path == "Untitled"):
-            # TODO update UI properly
             target = prompt_text("Save as file name")
 
             if not target:

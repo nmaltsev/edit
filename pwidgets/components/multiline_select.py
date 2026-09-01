@@ -14,6 +14,9 @@ class MultilineSelect(Slot):
     view_lines.extend([''] * (height - len(view_lines)))
     #print(view_lines)
     #line_number = self.view_port[1]
+    move_cursor(x, line_number - 1)
+    print(f"{self.state.active}".ljust(width, ' '))
+
     for line in view_lines:
       move_cursor(x, line_number)
       print(line[:width].ljust(width, 'X'))

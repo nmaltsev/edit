@@ -10,6 +10,7 @@ class Controller:
   def start(self):
     prev = None
     _selected_slot_index = 0
+    self._activate(_selected_slot_index)
     
     while True:
       key = read_sequence()
@@ -18,10 +19,16 @@ class Controller:
       if prev == 'CTRL_P':
         if key == 'RIGHT':
           _selected_slot_index = (_selected_slot_index + 1) % len(self.slots)
+          self._activate(_selected_slot_index)
         elif key == 'LEFT':
           _selected_slot_index = (_selected_slot_index - 1) % len(self.slots)
+          self._activate(_selected_slot_index)
 
-      print(f"{key=} {_selected_slot_index}")
+      # print(f"{key=} {_selected_slot_index}")
       prev = key
 
+  def _activate(self, active_slot_index):
+    for slot_index, slot in enumerate(self.slots):
+      # print(f"{slot_index=} {slot=}")
+      slot.state.active = slot_index == active_slot_index
     

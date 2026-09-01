@@ -211,26 +211,6 @@ def prompt_text2(message, view_box, search_cb, render_cb):
             move_cursor(2 + len(inputed_text), 1)
             sys.stdout.flush()
             
-def show_find_results(results):
-    # TODO: deprecated
-    clear()
-
-    if not results:
-        print("No matches found.")
-        print()
-        print("Press any key...")
-        read_sequence()
-        return
-
-    for path in results:
-        print(os.path.basename(path))
-        print(path)
-        print()
-
-    print("Press any key...")
-    read_sequence()
-
-
 def confirm_delete(path):
     answer = prompt_text(f"Delete '{os.path.basename(path)}'? (y/n)")
     return answer and answer.lower() == "y"
