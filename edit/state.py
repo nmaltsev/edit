@@ -272,6 +272,7 @@ class FileBrowserState:
             self.selected_index = max(0, len(self.items) - 1)
 
     def current_item(self):
+        # This function has been  used once!
         if not self.items:
             return None
 
