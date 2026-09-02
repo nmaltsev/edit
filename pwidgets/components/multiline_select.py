@@ -1,3 +1,4 @@
+import sys
 from .slot import Slot
 from pwidgets.utils.terminal import move_cursor
 from pwidgets.utils.ui import trim_name, fill
@@ -25,26 +26,26 @@ class MultilineSelect(Slot):
   #     line_number += 1
 
 
-  def render(self):
-    x, y, w, h = self.view_port
-    visible = self.data_provider.items[self.state.scroll_offset:self.state.scroll_offset + h]
+  # def render(self):
+  #   x, y, w, h = self.view_port
+  #   visible = self.data_provider.items[self.state.scroll_offset:self.state.scroll_offset + h]
 
-    move_cursor(x, y - 1)
-    print(f"{self.state.active}".ljust(w, ' '))
+  #   move_cursor(x, y - 1)
+  #   print(f"{self.state.active} sel:{self.state.selected_index} offset:{self.state.scroll_offset}".ljust(w, ' '))
 
-    for row in range(h):
-      move_cursor(x, y + row)
-      idx = self.state.scroll_offset + row
+  #   for row in range(h):
+  #     move_cursor(x, y + row)
+  #     idx = self.state.scroll_offset + row
 
-      if idx < len(self.data_provider.items):
-        name = self.data_provider.items[idx]
-        prefix = ">" if idx == self.state.selected_index else " "
-        text = prefix + trim_name(name, w - 1)
-      else:
-        text = ""
+  #     if idx < len(self.data_provider.items):
+  #       name = self.data_provider.items[idx]
+  #       prefix = ">" if idx == self.state.selected_index else " "
+  #       text = prefix + trim_name(name, w - 1)
+  #     else:
+  #       text = ""
 
-      print(fill(text, w), end="")
-    # sys.stdout.flush()
+  #     print(fill(text, w), end="")
+  #   # sys.stdout.flush()
 
   
   def refresh(self):
@@ -61,26 +62,18 @@ class MultilineSelect(Slot):
     self.refresh()
 
   def handle_keypress(self, key: str):
+    # TODO handle ENTER and other KEY combination in another functon
+    if not self.data_provider.items:
+      return
+
     if key == "UP":
-      if self.state.selected_index > 0:
-        self.state.selected_index -= 1
-
-        if self.state.selected_index < self.state.scroll_offset:
-          self.state.scroll_offset -= 1
-
-    if key == "HOME":
-      self.state.selected_index = self.state.scroll_offset = 0
-
+      new_index = max(0, self.state.selected_index - 1)
     elif key == "DOWN":
-      if self.state.selected_index < len(self.data_provider.items) - 1:
-        self.state.selected_index += 1
-        bottom = self.state.scroll_offset + self.view_port[3]
-
-        if self.state.selected_index >= bottom:
-          self.state.scroll_offset += 1
-
+      new_index = min(len(self.data_provider.items) - 1, self.state.selected_index + 1)
+    elif key == "HOME":
+      new_index = 0
     elif key == "ENTER":
-      pass
+      # TOD handle
         # path = browser.current_full_path()
 
         # if os.path.isdir(path):
@@ -91,3 +84,51 @@ class MultilineSelect(Slot):
 
         # elif os.path.isfile(path):
         #     return ("OPEN_FILE", path)
+      return
+    else:
+      return
+
+    height = self.view_port[3]
+    item_count = len(self.data_provider.items)
+
+    # Keep the new selection inside the viewport
+    if key == "HOME":
+      new_scroll_offset = 0
+    else:
+      new_scroll_offset = self.state.scroll_offset
+      if new_index < new_scroll_offset:
+        new_scroll_offset = new_index
+      elif new_index >= new_scroll_offset + height:
+        new_scroll_offset = new_index - height + 1
+
+    max_scroll_offset = max(0, item_count - height)
+    new_scroll_offset = max(0, min(new_scroll_offset, max_scroll_offset))
+
+    # Update state (effects may fire)
+    self.state.scroll_offset = new_scroll_offset
+    self.state.selected_index = new_index
+
+    ## Force one clean final paint so intermediate frames cannot linger
+    ## self.render()
+
+
+  def render(self):
+    x, y, w, h = self.view_port
+
+    # Header (above the list)
+    move_cursor(x, y - 1)
+    print(f"{self.state.active} sel:{self.state.selected_index} offset:{self.state.scroll_offset}".ljust(w, ' '), end="")
+
+    for row in range(h):
+      move_cursor(x, y + row)
+      idx = self.state.scroll_offset + row
+
+      if idx < len(self.data_provider.items):
+        name = self.data_provider.items[idx]
+        prefix = ">" if idx == self.state.selected_index else " "
+        text = prefix + trim_name(name, w - 1)
+      else:
+        text = ""
+
+      print(fill(text, w), end="")
+    ## sys.stdout.flush()   # critical for immediate, clean update

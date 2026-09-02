@@ -29,6 +29,7 @@ class Controller:
           sys.stdout.flush()
       else:
         self.slots[_selected_slot_index].handle_keypress(key)
+        sys.stdout.flush()
 
       # print(f"{key=} {_selected_slot_index}")
       prev = key
