@@ -59,7 +59,7 @@ class EditorApplication:
 
     def initialize(self):
         if len(sys.argv) > 1:
-            path = os.path.expanduser(sys.argv[1])
+            path = os.path.abspath(os.path.expanduser(sys.argv[1]))
 
             if os.path.isdir(path):
                 # Open directory in the file browser.
